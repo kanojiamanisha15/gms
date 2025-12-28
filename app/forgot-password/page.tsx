@@ -20,31 +20,30 @@ import {
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 
-type LoginFormValues = {
+type ForgotPasswordFormValues = {
   email: string;
-  password: string;
 };
 
-export default function LoginPage() {
-  const form = useForm<LoginFormValues>({
+export default function ForgotPasswordPage() {
+  const form = useForm<ForgotPasswordFormValues>({
     defaultValues: {
       email: "",
-      password: "",
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
+  const onSubmit = (data: ForgotPasswordFormValues) => {
     console.log(data);
-    // Handle login logic here
+    // Handle forgot password logic here
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold">Forgot password?</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Enter your email address and we&apos;ll send you a link to reset
+            your password
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -74,50 +73,18 @@ export default function LoginPage() {
                   </FormItem>
                 )}
               />
-              <FormField
-                control={form.control}
-                name="password"
-                rules={{
-                  required: "Password is required",
-                  minLength: {
-                    value: 6,
-                    message: "Password must be at least 6 characters",
-                  },
-                }}
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Password</FormLabel>
-                      <Link
-                        href="/forgot-password"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
-                    <FormControl>
-                      <Input
-                        type="password"
-                        placeholder="Enter your password"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <Button type="submit" className="w-full">
-                Sign in
+                Send reset link
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">
-              Don&apos;t have an account?{" "}
-            </span>
-            <a href="#" className="text-primary hover:underline font-medium">
-              Sign up
-            </a>
+            <Link
+              href="/login"
+              className="text-primary hover:underline font-medium"
+            >
+              Back to login
+            </Link>
           </div>
         </CardContent>
       </Card>

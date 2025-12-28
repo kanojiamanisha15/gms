@@ -20,60 +20,36 @@ import {
 import { useForm } from "react-hook-form";
 import Link from "next/link";
 
-type LoginFormValues = {
-  email: string;
+type ResetPasswordFormValues = {
   password: string;
+  confirmPassword: string;
 };
 
-export default function LoginPage() {
-  const form = useForm<LoginFormValues>({
+export default function ResetPasswordPage() {
+  const form = useForm<ResetPasswordFormValues>({
     defaultValues: {
-      email: "",
       password: "",
+      confirmPassword: "",
     },
   });
 
-  const onSubmit = (data: LoginFormValues) => {
+  const onSubmit = (data: ResetPasswordFormValues) => {
     console.log(data);
-    // Handle login logic here
+    // Handle reset password logic here
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center bg-background p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="space-y-1">
-          <CardTitle className="text-2xl font-bold">Welcome back</CardTitle>
+          <CardTitle className="text-2xl font-bold">Reset password</CardTitle>
           <CardDescription>
-            Enter your credentials to access your account
+            Enter your new password below to reset your account password
           </CardDescription>
         </CardHeader>
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="email"
-                rules={{
-                  required: "Email is required",
-                  pattern: {
-                    value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
-                    message: "Please enter a valid email address",
-                  },
-                }}
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="email"
-                        placeholder="name@example.com"
-                        {...field}
-                      />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
               <FormField
                 control={form.control}
                 name="password"
@@ -86,19 +62,37 @@ export default function LoginPage() {
                 }}
                 render={({ field }) => (
                   <FormItem>
-                    <div className="flex items-center justify-between">
-                      <FormLabel>Password</FormLabel>
-                      <Link
-                        href="/forgot-password"
-                        className="text-sm text-primary hover:underline"
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
+                    <FormLabel>New Password</FormLabel>
                     <FormControl>
                       <Input
                         type="password"
-                        placeholder="Enter your password"
+                        placeholder="Enter your new password"
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="confirmPassword"
+                rules={{
+                  required: "Please confirm your password",
+                  validate: (value) => {
+                    if (value !== form.getValues("password")) {
+                      return "Passwords do not match";
+                    }
+                    return true;
+                  },
+                }}
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Confirm Password</FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        placeholder="Confirm your new password"
                         {...field}
                       />
                     </FormControl>
@@ -107,17 +101,17 @@ export default function LoginPage() {
                 )}
               />
               <Button type="submit" className="w-full">
-                Sign in
+                Reset password
               </Button>
             </form>
           </Form>
           <div className="mt-4 text-center text-sm">
-            <span className="text-muted-foreground">
-              Don&apos;t have an account?{" "}
-            </span>
-            <a href="#" className="text-primary hover:underline font-medium">
-              Sign up
-            </a>
+            <Link
+              href="/login"
+              className="text-primary hover:underline font-medium"
+            >
+              Back to login
+            </Link>
           </div>
         </CardContent>
       </Card>

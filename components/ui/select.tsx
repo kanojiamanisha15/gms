@@ -1,82 +1,96 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { createPortal } from "react-dom"
-import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react"
-import { cn } from "@/lib/utils"
+import * as React from "react";
+import { createPortal } from "react-dom";
+import { CheckIcon, ChevronDownIcon, ChevronUpIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface SelectContextValue {
-  value?: string
-  onValueChange?: (value: string) => void
-  open: boolean
-  setOpen: (open: boolean) => void
-  triggerRef: React.RefObject<HTMLElement>
+  value?: string;
+  onValueChange?: (value: string) => void;
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  triggerRef: React.RefObject<HTMLElement>;
 }
 
-const SelectContext = React.createContext<SelectContextValue | null>(null)
+const SelectContext = React.createContext<SelectContextValue | null>(null);
 
-function Select({ 
-  children, 
-  value, 
+function Select({
+  children,
+  value,
   defaultValue,
   onValueChange,
-  ...props 
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
-  value?: string
-  defaultValue?: string
-  onValueChange?: (value: string) => void
+  value?: string;
+  defaultValue?: string;
+  onValueChange?: (value: string) => void;
 }) {
-  const [internalValue, setInternalValue] = React.useState(defaultValue || "")
-  const [open, setOpen] = React.useState(false)
-  const triggerRef = React.useRef<HTMLElement>(null)
-  
-  const controlledValue = value !== undefined ? value : internalValue
+  const [internalValue, setInternalValue] = React.useState(defaultValue || "");
+  const [open, setOpen] = React.useState(false);
+  const triggerRef = React.useRef<HTMLElement>(null);
+
+  const controlledValue = value !== undefined ? value : internalValue;
   const handleValueChange = (newValue: string) => {
     if (value === undefined) {
-      setInternalValue(newValue)
+      setInternalValue(newValue);
     }
-    onValueChange?.(newValue)
-    setOpen(false)
-  }
+    onValueChange?.(newValue);
+    setOpen(false);
+  };
 
   return (
-    <SelectContext.Provider value={{ value: controlledValue, onValueChange: handleValueChange, open, setOpen, triggerRef }}>
+    <SelectContext.Provider
+      value={{
+        value: controlledValue,
+        onValueChange: handleValueChange,
+        open,
+        setOpen,
+        triggerRef,
+      }}
+    >
       <div data-slot="select" {...props}>
         {children}
       </div>
     </SelectContext.Provider>
-  )
+  );
 }
 
-function SelectGroup({ children, ...props }: React.HTMLAttributes<HTMLDivElement>) {
+function SelectGroup({
+  children,
+  ...props
+}: React.HTMLAttributes<HTMLDivElement>) {
   return (
     <div data-slot="select-group" {...props}>
       {children}
     </div>
-  )
+  );
 }
 
-function SelectValue({ placeholder, ...props }: { placeholder?: string } & React.HTMLAttributes<HTMLSpanElement>) {
-  const context = React.useContext(SelectContext)
-  if (!context) throw new Error("SelectValue must be used within Select")
+function SelectValue({
+  placeholder,
+  ...props
+}: { placeholder?: string } & React.HTMLAttributes<HTMLSpanElement>) {
+  const context = React.useContext(SelectContext);
+  if (!context) throw new Error("SelectValue must be used within Select");
 
   return (
     <span data-slot="select-value" {...props}>
       {context.value || placeholder}
     </span>
-  )
+  );
 }
 
-function SelectTrigger({ 
-  className, 
+function SelectTrigger({
+  className,
   size = "default",
   children,
-  ...props 
+  ...props
 }: React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  size?: "sm" | "default"
+  size?: "sm" | "default";
 }) {
-  const context = React.useContext(SelectContext)
-  if (!context) throw new Error("SelectTrigger must be used within Select")
+  const context = React.useContext(SelectContext);
+  if (!context) throw new Error("SelectTrigger must be used within Select");
 
   return (
     <button
@@ -94,53 +108,90 @@ function SelectTrigger({
       {children}
       <ChevronDownIcon className="size-4 opacity-50" />
     </button>
-  )
+  );
 }
 
-function SelectContent({ 
-  className, 
+function SelectContent({
+  className,
   children,
   position = "item-aligned",
   align = "center",
-  ...props 
+  side = "bottom",
+  ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
-  position?: "item-aligned" | "popper"
-  align?: "start" | "center" | "end"
+  position?: "item-aligned" | "popper";
+  align?: "start" | "center" | "end";
+  side?: "top" | "bottom" | "left" | "right";
 }) {
-  const context = React.useContext(SelectContext)
-  if (!context) throw new Error("SelectContent must be used within Select")
-  
-  const [positionState, setPositionState] = React.useState({ top: 0, left: 0 })
-  const contentRef = React.useRef<HTMLDivElement>(null)
+  const context = React.useContext(SelectContext);
+  if (!context) throw new Error("SelectContent must be used within Select");
+
+  const [positionState, setPositionState] = React.useState({ top: 0, left: 0 });
+  const contentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
-    if (!context.open || !context.triggerRef.current || !contentRef.current) return
+    if (!context.open || !context.triggerRef.current || !contentRef.current)
+      return;
 
-    const triggerRect = context.triggerRef.current.getBoundingClientRect()
-    const contentRect = contentRef.current.getBoundingClientRect()
-    
-    let top = triggerRect.bottom + 4
-    let left = triggerRect.left
+    const triggerRect = context.triggerRef.current.getBoundingClientRect();
+    const contentRect = contentRef.current.getBoundingClientRect();
 
-    if (align === "end") {
-      left = triggerRect.right - contentRect.width
-    } else if (align === "center") {
-      left = triggerRect.left + (triggerRect.width - contentRect.width) / 2
+    let top = 0;
+    let left = 0;
+
+    if (side === "top") {
+      top = triggerRect.top - contentRect.height - 4;
+      left = triggerRect.left;
+      if (align === "end") {
+        left = triggerRect.right - contentRect.width;
+      } else if (align === "center") {
+        left = triggerRect.left + (triggerRect.width - contentRect.width) / 2;
+      }
+    } else if (side === "bottom") {
+      top = triggerRect.bottom + 4;
+      left = triggerRect.left;
+      if (align === "end") {
+        left = triggerRect.right - contentRect.width;
+      } else if (align === "center") {
+        left = triggerRect.left + (triggerRect.width - contentRect.width) / 2;
+      }
+    } else if (side === "left") {
+      left = triggerRect.left - contentRect.width - 4;
+      top = triggerRect.top;
+      if (align === "end") {
+        top = triggerRect.bottom - contentRect.height;
+      } else if (align === "center") {
+        top = triggerRect.top + (triggerRect.height - contentRect.height) / 2;
+      }
+    } else if (side === "right") {
+      left = triggerRect.right + 4;
+      top = triggerRect.top;
+      if (align === "end") {
+        top = triggerRect.bottom - contentRect.height;
+      } else if (align === "center") {
+        top = triggerRect.top + (triggerRect.height - contentRect.height) / 2;
+      }
     }
 
     // Adjust if overflow
     if (left + contentRect.width > window.innerWidth) {
-      left = window.innerWidth - contentRect.width - 8
+      left = window.innerWidth - contentRect.width - 8;
+    }
+    if (left < 0) {
+      left = 8;
     }
     if (top + contentRect.height > window.innerHeight) {
-      top = triggerRect.top - contentRect.height - 4
+      top = window.innerHeight - contentRect.height - 8;
+    }
+    if (top < 0) {
+      top = 8;
     }
 
-    setPositionState({ top, left })
-  }, [context.open, align])
+    setPositionState({ top, left });
+  }, [context.open, align, side]);
 
   React.useEffect(() => {
-    if (!context.open) return
+    if (!context.open) return;
 
     const handleClickOutside = (e: MouseEvent) => {
       if (
@@ -149,23 +200,23 @@ function SelectContent({
         context.triggerRef.current &&
         !context.triggerRef.current.contains(e.target as Node)
       ) {
-        context.setOpen(false)
+        context.setOpen(false);
       }
-    }
+    };
 
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [context.open])
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [context.open]);
 
-  if (!context.open) return null
+  if (!context.open) return null;
 
   const content = (
     <div
       ref={contentRef}
       data-slot="select-content"
-      style={{ 
-        position: "fixed", 
-        top: `${positionState.top}px`, 
+      style={{
+        position: "fixed",
+        top: `${positionState.top}px`,
         left: `${positionState.left}px`,
         zIndex: 50,
       }}
@@ -177,28 +228,34 @@ function SelectContent({
     >
       {children}
     </div>
-  )
+  );
 
-  return typeof document !== "undefined" ? createPortal(content, document.body) : null
+  return typeof document !== "undefined"
+    ? createPortal(content, document.body)
+    : null;
 }
 
-function SelectScrollUpButton({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
-  return null // Simplified - scroll buttons not needed for basic usage
+function SelectScrollUpButton({
+  ...props
+}: React.HTMLAttributes<HTMLButtonElement>) {
+  return null; // Simplified - scroll buttons not needed for basic usage
 }
 
-function SelectScrollDownButton({ ...props }: React.HTMLAttributes<HTMLButtonElement>) {
-  return null // Simplified - scroll buttons not needed for basic usage
+function SelectScrollDownButton({
+  ...props
+}: React.HTMLAttributes<HTMLButtonElement>) {
+  return null; // Simplified - scroll buttons not needed for basic usage
 }
 
 interface SelectItemProps extends React.HTMLAttributes<HTMLDivElement> {
-  value: string
+  value: string;
 }
 
 function SelectItem({ className, value, children, ...props }: SelectItemProps) {
-  const context = React.useContext(SelectContext)
-  if (!context) throw new Error("SelectItem must be used within Select")
+  const context = React.useContext(SelectContext);
+  if (!context) throw new Error("SelectItem must be used within Select");
 
-  const isSelected = context.value === value
+  const isSelected = context.value === value;
 
   return (
     <div
@@ -216,13 +273,17 @@ function SelectItem({ className, value, children, ...props }: SelectItemProps) {
       </span>
       {children}
     </div>
-  )
+  );
 }
 
-const SelectPortal = ({ children }: { children: React.ReactNode }) => children
-const SelectViewport = ({ children, className }: { children: React.ReactNode; className?: string }) => (
-  <div className={cn("p-1", className)}>{children}</div>
-)
+const SelectPortal = ({ children }: { children: React.ReactNode }) => children;
+const SelectViewport = ({
+  children,
+  className,
+}: {
+  children: React.ReactNode;
+  className?: string;
+}) => <div className={cn("p-1", className)}>{children}</div>;
 
 export {
   Select,
@@ -235,4 +296,4 @@ export {
   SelectScrollDownButton,
   SelectPortal,
   SelectViewport,
-}
+};

@@ -126,7 +126,11 @@ function SelectContent({
   const context = React.useContext(SelectContext);
   if (!context) throw new Error("SelectContent must be used within Select");
 
-  const [positionState, setPositionState] = React.useState({ top: 0, left: 0 });
+  const [positionState, setPositionState] = React.useState({
+    top: 0,
+    left: 0,
+    width: 0,
+  });
   const contentRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -138,6 +142,7 @@ function SelectContent({
 
     let top = 0;
     let left = 0;
+    const triggerWidth = triggerRect.width;
 
     if (side === "top") {
       top = triggerRect.top - contentRect.height - 4;
@@ -187,7 +192,7 @@ function SelectContent({
       top = 8;
     }
 
-    setPositionState({ top, left });
+    setPositionState({ top, left, width: triggerWidth });
   }, [context.open, align, side]);
 
   React.useEffect(() => {
@@ -218,6 +223,7 @@ function SelectContent({
         position: "fixed",
         top: `${positionState.top}px`,
         left: `${positionState.left}px`,
+        width: positionState.width > 0 ? `${positionState.width}px` : undefined,
         zIndex: 50,
       }}
       className={cn(

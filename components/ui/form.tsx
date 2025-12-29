@@ -21,6 +21,7 @@ type FormFieldContextValue<
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 > = {
   name: TName;
+  rules?: ControllerProps<TFieldValues, TName>["rules"];
 };
 
 const FormFieldContext = React.createContext<FormFieldContextValue>(
@@ -31,11 +32,12 @@ const FormField = <
   TFieldValues extends FieldValues = FieldValues,
   TName extends FieldPath<TFieldValues> = FieldPath<TFieldValues>
 >({
+  rules,
   ...props
 }: ControllerProps<TFieldValues, TName>) => {
   return (
-    <FormFieldContext.Provider value={{ name: props.name }}>
-      <Controller {...props} />
+    <FormFieldContext.Provider value={{ name: props.name, rules }}>
+      <Controller {...props} rules={rules} />
     </FormFieldContext.Provider>
   );
 };
@@ -53,12 +55,20 @@ const useFormField = () => {
 
   const { id } = itemContext;
 
+  // Check if field is required
+  const isRequired = React.useMemo(() => {
+    if (!fieldContext.rules) return false;
+    const rules = fieldContext.rules as any;
+    return !!rules.required;
+  }, [fieldContext.rules]);
+
   return {
     id,
     name: fieldContext.name,
     formItemId: `${id}-form-item`,
     formDescriptionId: `${id}-form-item-description`,
     formMessageId: `${id}-form-item-message`,
+    isRequired,
     ...fieldState,
   };
 };
@@ -88,8 +98,8 @@ FormItem.displayName = "FormItem";
 const FormLabel = React.forwardRef<
   HTMLLabelElement,
   React.LabelHTMLAttributes<HTMLLabelElement>
->(({ className, ...props }, ref) => {
-  const { error, formItemId } = useFormField();
+>(({ className, children, ...props }, ref) => {
+  const { error, formItemId, isRequired } = useFormField();
 
   return (
     <Label
@@ -97,7 +107,10 @@ const FormLabel = React.forwardRef<
       className={cn(error && "text-destructive", className)}
       htmlFor={formItemId}
       {...props}
-    />
+    >
+      {children}
+      {isRequired && <span className="text-destructive ml-1">*</span>}
+    </Label>
   );
 });
 FormLabel.displayName = "FormLabel";

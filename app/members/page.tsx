@@ -1,6 +1,10 @@
+"use client";
+
 import { AppSidebar } from "@/components/ui/app-sidebar";
+import { PageContent } from "@/components/ui/page-content";
 import { SiteHeader } from "@/components/ui/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { MembersTable } from "./members-table";
 
 export default function MembersPage() {
   return (
@@ -15,18 +19,9 @@ export default function MembersPage() {
       <AppSidebar variant="inset" />
       <SidebarInset>
         <SiteHeader />
-        <div className="flex flex-1 flex-col">
-          <div className="@container/main flex flex-1 flex-col gap-2">
-            <div className="flex flex-col gap-4 py-4 md:gap-6 md:py-6">
-              <div className="px-4 lg:px-6">
-                <h1 className="text-2xl font-semibold">Members</h1>
-                <p className="text-muted-foreground mt-2">
-                  Manage your gym members
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
+        <PageContent title="Members" description="Manage your gym members">
+          <MembersTable />
+        </PageContent>
       </SidebarInset>
     </SidebarProvider>
   );

@@ -99,7 +99,7 @@ export function DataTable<TData, TValue>({
   return (
     <div className="px-4 lg:px-6 space-y-4">
       <Card>
-        <CardContent className="pt-6">
+        <CardContent>
           <div className="space-y-4">
             {/* Search */}
             <div className="flex items-center gap-4">

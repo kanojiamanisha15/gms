@@ -1,7 +1,8 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
+import { useEffect, useState } from "react";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { PageContent } from "@/components/ui/page-content";
 import { SiteHeader } from "@/components/ui/site-header";
@@ -26,6 +27,7 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
+import { Member } from "../../members-table";
 
 type MemberFormData = {
   name: string;
@@ -36,8 +38,127 @@ type MemberFormData = {
   status: "active" | "inactive" | "expired";
 };
 
+// Mock members data - in a real app, this would be fetched from an API
+const mockMembers: Member[] = [
+  {
+    id: "1",
+    name: "John Doe",
+    email: "john.doe@example.com",
+    phone: "+1 234-567-8900",
+    membershipType: "Premium",
+    joinDate: "2024-01-15",
+    status: "active",
+  },
+  {
+    id: "2",
+    name: "Jane Smith",
+    email: "jane.smith@example.com",
+    phone: "+1 234-567-8901",
+    membershipType: "Basic",
+    joinDate: "2024-02-20",
+    status: "active",
+  },
+  {
+    id: "3",
+    name: "Bob Johnson",
+    email: "bob.johnson@example.com",
+    phone: "+1 234-567-8902",
+    membershipType: "Premium",
+    joinDate: "2023-12-10",
+    status: "expired",
+  },
+  {
+    id: "4",
+    name: "Alice Williams",
+    email: "alice.williams@example.com",
+    phone: "+1 234-567-8903",
+    membershipType: "Standard",
+    joinDate: "2024-03-05",
+    status: "active",
+  },
+  {
+    id: "5",
+    name: "Charlie Brown",
+    email: "charlie.brown@example.com",
+    phone: "+1 234-567-8904",
+    membershipType: "Basic",
+    joinDate: "2024-01-28",
+    status: "inactive",
+  },
+  {
+    id: "6",
+    name: "Diana Prince",
+    email: "diana.prince@example.com",
+    phone: "+1 234-567-8905",
+    membershipType: "Premium",
+    joinDate: "2024-02-14",
+    status: "active",
+  },
+  {
+    id: "7",
+    name: "Edward Norton",
+    email: "edward.norton@example.com",
+    phone: "+1 234-567-8906",
+    membershipType: "Standard",
+    joinDate: "2023-11-30",
+    status: "expired",
+  },
+  {
+    id: "8",
+    name: "Fiona Green",
+    email: "fiona.green@example.com",
+    phone: "+1 234-567-8907",
+    membershipType: "Basic",
+    joinDate: "2024-03-20",
+    status: "active",
+  },
+  {
+    id: "9",
+    name: "George White",
+    email: "george.white@example.com",
+    phone: "+1 234-567-8908",
+    membershipType: "Premium",
+    joinDate: "2024-01-10",
+    status: "active",
+  },
+  {
+    id: "10",
+    name: "Hannah Black",
+    email: "hannah.black@example.com",
+    phone: "+1 234-567-8909",
+    membershipType: "Standard",
+    joinDate: "2024-02-28",
+    status: "inactive",
+  },
+  {
+    id: "11",
+    name: "Ian Gray",
+    email: "ian.gray@example.com",
+    phone: "+1 234-567-8910",
+    membershipType: "Basic",
+    joinDate: "2023-10-15",
+    status: "expired",
+  },
+  {
+    id: "12",
+    name: "Julia Red",
+    email: "julia.red@example.com",
+    phone: "+1 234-567-8911",
+    membershipType: "Premium",
+    joinDate: "2024-03-12",
+    status: "active",
+  },
+];
+
 export default function AddMemberPage() {
   const router = useRouter();
+  const params = useParams();
+  // Handle catch-all route: params.id will be an array or undefined
+  const memberId = Array.isArray(params?.id) ? params.id[0] : params?.id;
+  const isEditMode = !!memberId;
+  const [member, setMember] = useState<Member | null>(null);
+  const [loading, setLoading] = useState(isEditMode);
+
   const form = useForm<MemberFormData>({
     defaultValues: {
       name: "",
@@ -49,10 +170,35 @@ export default function AddMemberPage() {
     },
   });
 
+  useEffect(() => {
+    if (isEditMode && memberId) {
+      // In a real app, this would be an API call
+      const foundMember = mockMembers.find((m) => m.id === memberId);
+
+      if (foundMember) {
+        setMember(foundMember);
+        form.reset({
+          name: foundMember.name,
+          email: foundMember.email,
+          phone: foundMember.phone,
+          membershipType: foundMember.membershipType,
+          joinDate: foundMember.joinDate,
+          status: foundMember.status,
+        });
+      }
+      setLoading(false);
+    }
+  }, [isEditMode, memberId, form]);
+
   const onSubmit = async (data: MemberFormData) => {
     try {
-      // TODO: Replace with actual API call
-      console.log("Adding member:", data);
+      if (isEditMode) {
+        // TODO: Replace with actual API call
+        console.log("Updating member:", memberId, data);
+      } else {
+        // TODO: Replace with actual API call
+        console.log("Adding member:", data);
+      }
 
       // Simulate API call
       await new Promise((resolve) => setTimeout(resolve, 500));
@@ -60,9 +206,75 @@ export default function AddMemberPage() {
       // Redirect back to members page after successful submission
       router.push("/members");
     } catch (error) {
-      console.error("Error adding member:", error);
+      console.error(
+        `Error ${isEditMode ? "updating" : "adding"} member:`,
+        error
+      );
     }
   };
+
+  if (loading) {
+    return (
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <PageContent
+            title={isEditMode ? "Edit Member" : "Add Member"}
+            description={
+              isEditMode
+                ? "Edit member information"
+                : "Add a new member to your gym"
+            }
+          >
+            <div className="px-4 lg:px-6">Loading...</div>
+          </PageContent>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
+
+  if (isEditMode && !member) {
+    return (
+      <SidebarProvider
+        style={
+          {
+            "--sidebar-width": "calc(var(--spacing) * 72)",
+            "--header-height": "calc(var(--spacing) * 12)",
+          } as React.CSSProperties
+        }
+      >
+        <AppSidebar variant="inset" />
+        <SidebarInset>
+          <SiteHeader />
+          <PageContent
+            title="Edit Member"
+            description="Edit member information"
+          >
+            <div className="px-4 lg:px-6">
+              <Card>
+                <CardContent className="pt-6">
+                  <p>Member not found</p>
+                  <Link href="/members">
+                    <Button variant="outline" className="mt-4">
+                      Back to Members
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </PageContent>
+        </SidebarInset>
+      </SidebarProvider>
+    );
+  }
 
   return (
     <SidebarProvider
@@ -77,8 +289,12 @@ export default function AddMemberPage() {
       <SidebarInset>
         <SiteHeader />
         <PageContent
-          title="Add Member"
-          description="Add a new member to your gym"
+          title={isEditMode ? "Edit Member" : "Add Member"}
+          description={
+            isEditMode
+              ? "Edit member information"
+              : "Add a new member to your gym"
+          }
           headerAction={
             <Link href="/members">
               <Button variant="ghost">
@@ -259,7 +475,11 @@ export default function AddMemberPage() {
                         disabled={form.formState.isSubmitting}
                       >
                         {form.formState.isSubmitting
-                          ? "Adding..."
+                          ? isEditMode
+                            ? "Updating..."
+                            : "Adding..."
+                          : isEditMode
+                          ? "Update Member"
                           : "Add Member"}
                       </Button>
                     </div>

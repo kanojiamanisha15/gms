@@ -2,10 +2,33 @@
 
 import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
-import { Pencil, Trash2 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { DataTable } from "@/components/ui/data-table";
+import { EditButton } from "@/components/ui/edit-button";
+import { DeleteButton } from "@/components/ui/delete-button";
+
+function ActionsCell({ member }: { member: Member }) {
+  const handleDelete = (id: string) => {
+    // Handle delete action
+    console.log("Delete member:", id);
+  };
+
+  return (
+    <div className="flex items-center gap-2">
+      <EditButton
+        id={member.id}
+        editPath="/members/add-member"
+        entityName="member"
+      />
+      <DeleteButton
+        id={member.id}
+        onDelete={handleDelete}
+        entityName="member"
+        itemName={member.name}
+      />
+    </div>
+  );
+}
 
 export type Member = {
   id: string;
@@ -191,35 +214,7 @@ const columns: ColumnDef<Member>[] = [
     header: "Actions",
     cell: ({ row }) => {
       const member = row.original;
-
-      return (
-        <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8"
-            onClick={() => {
-              // Handle edit action
-              console.log("Edit member:", member.id);
-            }}
-          >
-            <Pencil className="h-4 w-4" />
-            <span className="sr-only">Edit member</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="h-8 w-8 text-destructive hover:text-destructive hover:bg-destructive/10"
-            onClick={() => {
-              // Handle delete action
-              console.log("Delete member:", member.id);
-            }}
-          >
-            <Trash2 className="h-4 w-4" />
-            <span className="sr-only">Delete member</span>
-          </Button>
-        </div>
-      );
+      return <ActionsCell member={member} />;
     },
     enableSorting: false,
   },

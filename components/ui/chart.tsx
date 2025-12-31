@@ -243,4 +243,5 @@ const ChartTooltipContent = React.forwardRef<
 );
 ChartTooltipContent.displayName = "ChartTooltipContent";
 
-export { ChartContainer, ChartTooltip, ChartTooltipContent, ChartConfig };
+export { ChartContainer, ChartTooltip, ChartTooltipContent };
+export type { ChartConfig };

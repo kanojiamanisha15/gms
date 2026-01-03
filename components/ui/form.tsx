@@ -36,7 +36,9 @@ const FormField = <
   ...props
 }: ControllerProps<TFieldValues, TName>) => {
   return (
-    <FormFieldContext.Provider value={{ name: props.name, rules }}>
+    <FormFieldContext.Provider
+      value={{ name: props.name, rules } as FormFieldContextValue}
+    >
       <Controller {...props} rules={rules} />
     </FormFieldContext.Provider>
   );
@@ -58,7 +60,7 @@ const useFormField = () => {
   // Check if field is required
   const isRequired = React.useMemo(() => {
     if (!fieldContext.rules) return false;
-    const rules = fieldContext.rules as any;
+    const rules = fieldContext.rules as { required?: boolean | string };
     return !!rules.required;
   }, [fieldContext.rules]);
 

@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 interface DrawerContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
+  direction: "left" | "right" | "top" | "bottom";
 }
 
 const DrawerContext = React.createContext<DrawerContextValue | null>(null);

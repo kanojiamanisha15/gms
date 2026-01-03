@@ -10,7 +10,7 @@ import { Separator } from "@/components/ui/separator";
 interface DropdownMenuContextValue {
   open: boolean;
   setOpen: (open: boolean) => void;
-  triggerRef: React.RefObject<HTMLElement>;
+  triggerRef: React.RefObject<HTMLElement | null>;
 }
 
 const DropdownMenuContext =
@@ -300,7 +300,7 @@ function DropdownMenuRadioItem({
       </span>
       {children}
     </div>
-  )
+  );
 }
 
 function DropdownMenuLabel({

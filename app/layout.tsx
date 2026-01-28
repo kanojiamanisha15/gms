@@ -8,8 +8,8 @@ const nunitoSans = Nunito_Sans({
 });
 
 export const metadata: Metadata = {
-  title: "Login",
-  description: "Login page",
+  title: "Acme Inc.",
+  description: "Manage your gym members, attendance, and payments",
 };
 
 export default function RootLayout({

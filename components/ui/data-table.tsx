@@ -48,9 +48,14 @@ export interface DataTableProps<TData, TValue> {
   searchPlaceholder?: string;
   addButtonLabel?: string;
   addButtonHref?: string;
+  onAddClick?: () => void;
   entityName?: string;
   defaultPageSize?: number;
   showAddButton?: boolean;
+  header?: React.ReactNode;
+  headerTitle?: string;
+  headerDescription?: string;
+  headerAction?: React.ReactNode;
 }
 
 export function DataTable<TData, TValue>({
@@ -59,9 +64,14 @@ export function DataTable<TData, TValue>({
   searchPlaceholder = "Search...",
   addButtonLabel = "Add",
   addButtonHref,
+  onAddClick,
   entityName = "item",
   defaultPageSize = 10,
   showAddButton = true,
+  header,
+  headerTitle,
+  headerDescription,
+  headerAction,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -96,9 +106,31 @@ export function DataTable<TData, TValue>({
     },
   });
 
+  // Generate header if title is provided
+  const displayHeader =
+    header ||
+    (headerTitle && (
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2 className="text-2xl font-semibold tracking-tight">
+            {headerTitle}
+          </h2>
+          {headerDescription && (
+            <p className="text-sm text-muted-foreground mt-1">
+              {headerDescription}
+            </p>
+          )}
+        </div>
+        {headerAction && <div className="shrink-0">{headerAction}</div>}
+      </div>
+    ));
+
   return (
     <div className="px-4 lg:px-6 space-y-4">
       <Card>
+        {displayHeader && (
+          <div className="px-6 pb-4 border-b">{displayHeader}</div>
+        )}
         <CardContent>
           <div className="space-y-4">
             {/* Search */}
@@ -112,14 +144,21 @@ export function DataTable<TData, TValue>({
                   className="pl-9"
                 />
               </div>
-              {showAddButton && addButtonHref && (
-                <Link href={addButtonHref}>
-                  <Button>
+              {showAddButton &&
+                (addButtonHref || onAddClick) &&
+                (onAddClick ? (
+                  <Button onClick={onAddClick}>
                     <Plus className="h-4 w-4 mr-2" />
                     {addButtonLabel}
                   </Button>
-                </Link>
-              )}
+                ) : (
+                  <Link href={addButtonHref!}>
+                    <Button>
+                      <Plus className="h-4 w-4 mr-2" />
+                      {addButtonLabel}
+                    </Button>
+                  </Link>
+                ))}
             </div>
 
             {/* Table */}
@@ -199,15 +238,19 @@ export function DataTable<TData, TValue>({
               <div className="flex items-center gap-2">
                 <p className="text-sm text-muted-foreground">
                   Showing{" "}
-                  {table.getState().pagination.pageIndex *
-                    table.getState().pagination.pageSize +
-                    1}{" "}
+                  {table.getFilteredRowModel().rows.length === 0
+                    ? 0
+                    : table.getState().pagination.pageIndex *
+                        table.getState().pagination.pageSize +
+                      1}{" "}
                   to{" "}
-                  {Math.min(
-                    (table.getState().pagination.pageIndex + 1) *
-                      table.getState().pagination.pageSize,
-                    table.getFilteredRowModel().rows.length
-                  )}{" "}
+                  {table.getFilteredRowModel().rows.length === 0
+                    ? 0
+                    : Math.min(
+                        (table.getState().pagination.pageIndex + 1) *
+                          table.getState().pagination.pageSize,
+                        table.getFilteredRowModel().rows.length
+                      )}{" "}
                   of {table.getFilteredRowModel().rows.length} {entityName}(s)
                 </p>
               </div>
@@ -227,7 +270,7 @@ export function DataTable<TData, TValue>({
                         )}
                       />
                     </SelectTrigger>
-                    <SelectContent side="top">
+                    <SelectContent side="top" align="start">
                       {[10, 20, 30, 50, 100].map((pageSize) => (
                         <SelectItem key={pageSize} value={`${pageSize}`}>
                           {pageSize}
@@ -238,8 +281,11 @@ export function DataTable<TData, TValue>({
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="flex items-center justify-center text-sm font-medium">
-                    Page {table.getState().pagination.pageIndex + 1} of{" "}
-                    {table.getPageCount()}
+                    Page{" "}
+                    {table.getFilteredRowModel().rows.length === 0
+                      ? 0
+                      : table.getState().pagination.pageIndex + 1}{" "}
+                    of {table.getPageCount()}
                   </div>
                   <div className="flex items-center gap-1">
                     <Button

@@ -1,0 +1,307 @@
+"use client";
+
+import * as React from "react";
+import { PageContent } from "@/components/ui/page-content";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Bell,
+  Check,
+  X,
+  AlertCircle,
+  Info,
+  CheckCircle,
+  AlertTriangle,
+} from "lucide-react";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
+
+type Notification = {
+  id: string;
+  title: string;
+  message: string;
+  type: "info" | "success" | "warning" | "error";
+  read: boolean;
+  createdAt: string;
+};
+
+const mockNotifications: Notification[] = [
+  {
+    id: "1",
+    title: "New Member Registration",
+    message: "John Doe has registered for a Premium membership plan.",
+    type: "success",
+    read: false,
+    createdAt: "2026-01-15T10:30:00",
+  },
+  {
+    id: "2",
+    title: "Payment Received",
+    message: "Payment of Rs.299.99 received from Jane Smith.",
+    type: "success",
+    read: false,
+    createdAt: "2026-01-14T14:20:00",
+  },
+  {
+    id: "3",
+    title: "Membership Expiring Soon",
+    message: "3 memberships are expiring within the next 7 days.",
+    type: "warning",
+    read: false,
+    createdAt: "2026-01-13T09:15:00",
+  },
+  {
+    id: "4",
+    title: "Equipment Maintenance Due",
+    message: "Treadmill #5 requires scheduled maintenance.",
+    type: "info",
+    read: true,
+    createdAt: "2026-01-12T16:45:00",
+  },
+  {
+    id: "5",
+    title: "Payment Overdue",
+    message: "Payment from Bob Johnson is overdue by 5 days.",
+    type: "error",
+    read: false,
+    createdAt: "2026-01-11T11:00:00",
+  },
+  {
+    id: "6",
+    title: "New Trainer Added",
+    message: "Sarah Williams has been added as a new trainer.",
+    type: "info",
+    read: true,
+    createdAt: "2026-01-10T08:30:00",
+  },
+  {
+    id: "7",
+    title: "Monthly Report Ready",
+    message: "January 2026 monthly financial report is now available.",
+    type: "info",
+    read: true,
+    createdAt: "2026-01-09T12:00:00",
+  },
+  {
+    id: "8",
+    title: "Low Stock Alert",
+    message: "Cleaning supplies are running low. Please reorder soon.",
+    type: "warning",
+    read: true,
+    createdAt: "2026-01-08T10:15:00",
+  },
+];
+
+const getNotificationIcon = (type: Notification["type"]) => {
+  switch (type) {
+    case "success":
+      return <CheckCircle className="h-5 w-5 text-green-600" />;
+    case "warning":
+      return <AlertTriangle className="h-5 w-5 text-yellow-600" />;
+    case "error":
+      return <AlertCircle className="h-5 w-5 text-red-600" />;
+    case "info":
+    default:
+      return <Info className="h-5 w-5 text-blue-600" />;
+  }
+};
+
+const getNotificationBadgeVariant = (
+  type: Notification["type"]
+): "default" | "secondary" | "destructive" | "outline" => {
+  switch (type) {
+    case "success":
+      return "default";
+    case "warning":
+      return "secondary";
+    case "error":
+      return "destructive";
+    case "info":
+    default:
+      return "outline";
+  }
+};
+
+export default function NotificationsPage() {
+  const [notifications, setNotifications] =
+    React.useState<Notification[]>(mockNotifications);
+
+  const unreadCount = notifications.filter((n) => !n.read).length;
+
+  const markAsRead = (id: string) => {
+    setNotifications((prev) =>
+      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
+    );
+  };
+
+  const markAllAsRead = () => {
+    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+  };
+
+  const deleteNotification = (id: string) => {
+    setNotifications((prev) => prev.filter((n) => n.id !== id));
+  };
+
+  const unreadNotifications = notifications.filter((n) => !n.read);
+  const readNotifications = notifications.filter((n) => n.read);
+
+  return (
+    <PageContent
+      title="Notifications"
+      description="Stay updated with important alerts and updates"
+      headerAction={
+        unreadCount > 0 ? (
+          <Button variant="outline" onClick={markAllAsRead}>
+            <Check className="h-4 w-4 mr-2" />
+            Mark all as read
+          </Button>
+        ) : null
+      }
+    >
+      <div className="px-4 lg:px-6 space-y-6">
+        {unreadCount > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Bell className="h-5 w-5" />
+                  <CardTitle>Unread Notifications</CardTitle>
+                  <Badge variant="destructive">{unreadCount}</Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {unreadNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-start gap-4 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+                  >
+                    <div className="mt-0.5">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-semibold text-sm">
+                            {notification.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {notification.message}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={getNotificationBadgeVariant(
+                            notification.type
+                          )}
+                          className="shrink-0"
+                        >
+                          {notification.type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-muted-foreground">
+                          {dayjs(notification.createdAt).fromNow()}
+                        </span>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => markAsRead(notification.id)}
+                          >
+                            <Check className="h-4 w-4 mr-1" />
+                            Mark as read
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => deleteNotification(notification.id)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <CardTitle>
+              {unreadCount > 0 ? "Read Notifications" : "All Notifications"}
+            </CardTitle>
+            <CardDescription>
+              {readNotifications.length} notification
+              {readNotifications.length !== 1 ? "s" : ""} read
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {readNotifications.length > 0 ? (
+              <div className="space-y-3">
+                {readNotifications.map((notification) => (
+                  <div
+                    key={notification.id}
+                    className="flex items-start gap-4 p-4 rounded-lg border opacity-75 hover:opacity-100 transition-opacity"
+                  >
+                    <div className="mt-0.5">
+                      {getNotificationIcon(notification.type)}
+                    </div>
+                    <div className="flex-1 space-y-1">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <h4 className="font-semibold text-sm">
+                            {notification.title}
+                          </h4>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {notification.message}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={getNotificationBadgeVariant(
+                            notification.type
+                          )}
+                          className="shrink-0"
+                        >
+                          {notification.type}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center justify-between mt-2">
+                        <span className="text-xs text-muted-foreground">
+                          {dayjs(notification.createdAt).fromNow()}
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => deleteNotification(notification.id)}
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No read notifications
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    </PageContent>
+  );
+}

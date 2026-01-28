@@ -31,9 +31,12 @@ export function NavMain({
           {items.map((item) => {
             // Check if the current route matches the item URL
             // For Dashboard, also check if pathname is "/"
+            // For other routes, check if pathname starts with the item URL (for child routes)
             const isActive =
               pathname === item.url ||
-              (item.url === "/dashboard" && pathname === "/");
+              (item.url === "/dashboard" && pathname === "/") ||
+              (pathname.startsWith(item.url + "/") &&
+                item.url !== "/dashboard");
 
             return (
               <SidebarMenuItem key={item.title}>

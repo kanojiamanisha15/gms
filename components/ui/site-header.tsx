@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Bell } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
@@ -105,8 +106,13 @@ export function SiteHeader() {
                 </div>
               )}
               <DropdownMenuSeparator />
-              <DropdownMenuItem className="justify-center text-center cursor-pointer">
-                View all notifications
+              <DropdownMenuItem asChild>
+                <Link
+                  href="/notifications"
+                  className="justify-center text-center cursor-pointer"
+                >
+                  View all notifications
+                </Link>
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>

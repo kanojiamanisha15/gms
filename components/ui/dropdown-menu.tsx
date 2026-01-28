@@ -208,32 +208,48 @@ function DropdownMenuItem({
   className,
   inset,
   variant = "default",
+  asChild,
+  children,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   inset?: boolean;
   variant?: "default" | "destructive";
+  asChild?: boolean;
 }) {
   const context = React.useContext(DropdownMenuContext);
 
-  const handleClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    props.onClick?.(e);
+  const handleClick = (e: React.MouseEvent) => {
+    props.onClick?.(e as React.MouseEvent<HTMLDivElement>);
     context?.setOpen(false);
   };
 
-  return (
-    <div
-      data-slot="dropdown-menu-item"
-      data-inset={inset}
-      data-variant={variant}
-      className={cn(
-        "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 cursor-pointer [&_svg:not([class*='text-'])]:text-muted-foreground relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
-        inset && "pl-8",
-        className
-      )}
-      onClick={handleClick}
-      {...props}
-    />
-  );
+  const itemProps = {
+    "data-slot": "dropdown-menu-item",
+    "data-inset": inset,
+    "data-variant": variant,
+    className: cn(
+      "focus:bg-accent focus:text-accent-foreground data-[variant=destructive]:text-destructive data-[variant=destructive]:focus:bg-destructive/10 dark:data-[variant=destructive]:focus:bg-destructive/20 cursor-pointer [&_svg:not([class*='text-'])]:text-muted-foreground relative flex items-center gap-2 rounded-sm px-2 py-1.5 text-sm outline-hidden select-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+      inset && "pl-8",
+      className
+    ),
+    onClick: handleClick,
+    ...props,
+  };
+
+  if (asChild && React.isValidElement(children)) {
+    return React.cloneElement(
+      children as React.ReactElement,
+      {
+        ...itemProps,
+        className: cn(
+          itemProps.className,
+          (children as React.ReactElement).props.className
+        ),
+      } as any
+    );
+  }
+
+  return <div {...itemProps}>{children}</div>;
 }
 
 function DropdownMenuCheckboxItem({

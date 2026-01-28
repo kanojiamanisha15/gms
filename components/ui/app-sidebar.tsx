@@ -11,6 +11,7 @@ import {
   Settings,
   HelpCircle,
   Layers,
+  BellRing,
 } from "lucide-react";
 
 import { NavMain } from "@/components/ui/nav-main";
@@ -65,16 +66,16 @@ const data = {
     },
   ],
   navSecondary: [
-    {
-      title: "Settings",
-      url: "/settings",
-      icon: Settings,
-    },
-    {
-      title: "Help",
-      url: "/help",
-      icon: HelpCircle,
-    },
+    // {
+    //   title: "Settings",
+    //   url: "/settings",
+    //   icon: Settings,
+    // },
+    // {
+    //   title: "Help",
+    //   url: "/help",
+    //   icon: HelpCircle,
+    // },
   ],
 };
 

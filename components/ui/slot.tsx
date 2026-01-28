@@ -20,12 +20,12 @@ const Slot = React.forwardRef<HTMLElement, SlotProps>(
     if (React.isValidElement(children)) {
       const childElement = children as React.ReactElement<{
         className?: string;
+        ref?: React.Ref<HTMLElement>;
       }>;
 
-      // Extract child ref safely without accessing during render
-      type ChildWithRef = React.ReactElement & { ref?: React.Ref<HTMLElement> };
-      const childWithRef = childElement as ChildWithRef;
-      const childRef = childWithRef.ref;
+      // Extract child ref from props (React 19 compatible)
+      const childProps = childElement.props as Record<string, unknown>;
+      const childRef = (childProps.ref as React.Ref<HTMLElement>) || undefined;
 
       // Create merged ref callback - only called on mount/unmount, never during render
       // This pattern merges refs for composition - standard Slot behavior
@@ -36,7 +36,6 @@ const Slot = React.forwardRef<HTMLElement, SlotProps>(
         setRefValue(childRef, node);
       };
 
-      const childProps = childElement.props as Record<string, unknown>;
       const mergedClassName = cn(childProps.className as string, className);
 
       // Merge all props and override with merged ref

@@ -137,6 +137,12 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+const timeRangeLabels: Record<string, string> = {
+  "90d": "Last 3 months",
+  "30d": "Last 30 days",
+  "7d": "Last 7 days",
+};
+
 export function ChartAreaInteractive() {
   const isMobile = useIsMobile();
   const [timeRange, setTimeRange] = React.useState("90d");
@@ -193,7 +199,7 @@ export function ChartAreaInteractive() {
               size="sm"
               aria-label="Select a value"
             >
-              <SelectValue placeholder="Last 3 months" />
+              <SelectValue placeholder="Last 3 months" labels={timeRangeLabels} />
             </SelectTrigger>
             <SelectContent className="rounded-xl" align="start">
               <SelectItem value="90d" className="rounded-lg">

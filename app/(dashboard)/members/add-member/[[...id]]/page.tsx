@@ -83,6 +83,21 @@ type MemberFormData = {
   paymentAmount: number;
 };
 
+const membershipTypeLabels: Record<string, string> = {
+  basic: "Basic",
+  standard: "Standard",
+  premium: "Premium",
+};
+const statusLabels: Record<MemberFormData["status"], string> = {
+  active: "Active",
+  inactive: "Inactive",
+  expired: "Expired",
+};
+const paymentStatusLabels: Record<MemberFormData["paymentStatus"], string> = {
+  paid: "Paid",
+  unpaid: "Unpaid",
+};
+
 export default function AddMemberPage() {
   const router = useRouter();
   const params = useParams();
@@ -313,12 +328,12 @@ export default function AddMemberPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select membership type" />
+                              <SelectValue placeholder="Select membership type" labels={membershipTypeLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
-                              <SelectItem value="Basic">Basic</SelectItem>
-                              <SelectItem value="Standard">Standard</SelectItem>
-                              <SelectItem value="Premium">Premium</SelectItem>
+                              <SelectItem value="basic">Basic</SelectItem>
+                              <SelectItem value="standard">Standard</SelectItem>
+                              <SelectItem value="premium">Premium</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -376,7 +391,7 @@ export default function AddMemberPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select status" />
+                              <SelectValue placeholder="Select status" labels={statusLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
                               <SelectItem value="active">Active</SelectItem>
@@ -405,7 +420,7 @@ export default function AddMemberPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select payment status" />
+                              <SelectValue placeholder="Select payment status" labels={paymentStatusLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
                               <SelectItem value="paid">Paid</SelectItem>

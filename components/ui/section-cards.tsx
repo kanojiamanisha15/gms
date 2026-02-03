@@ -22,6 +22,13 @@ import {
 
 type TimePeriod = "monthly" | "quarterly" | "half-yearly" | "yearly";
 
+const periodLabels: Record<TimePeriod, string> = {
+  monthly: "Monthly",
+  quarterly: "Quarterly",
+  "half-yearly": "Half Yearly",
+  yearly: "Yearly",
+};
+
 interface CardData {
   revenue: number;
   newCustomers: number;
@@ -94,7 +101,7 @@ export function SectionCards() {
           onValueChange={(value) => setPeriod(value as TimePeriod)}
         >
           <SelectTrigger className="w-[180px]">
-            <SelectValue placeholder="Select period" />
+            <SelectValue placeholder="Select period" labels={periodLabels} />
           </SelectTrigger>
           <SelectContent align="start">
             <SelectItem value="monthly">Monthly</SelectItem>

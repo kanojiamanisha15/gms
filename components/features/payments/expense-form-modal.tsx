@@ -38,6 +38,24 @@ type ExpenseFormData = {
   vendor?: string;
 };
 
+const categoryLabels: Record<string, string> = {
+  equipment: "Equipment",
+  utilities: "Utilities",
+  rent: "Rent",
+  supplies: "Supplies",
+  staff: "Staff",
+  marketing: "Marketing",
+  insurance: "Insurance",
+  maintenance: "Maintenance",
+  software: "Software",
+  other: "Other",
+};
+const statusLabels: Record<ExpenseFormData["status"], string> = {
+  paid: "Paid",
+  pending: "Pending",
+  overdue: "Overdue",
+};
+
 interface ExpenseFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -125,21 +143,19 @@ export function ExpenseFormModal({
                         value={field.value}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select category" />
+                          <SelectValue placeholder="Select category" labels={categoryLabels} />
                         </SelectTrigger>
                         <SelectContent align="start">
-                          <SelectItem value="Equipment">Equipment</SelectItem>
-                          <SelectItem value="Utilities">Utilities</SelectItem>
-                          <SelectItem value="Rent">Rent</SelectItem>
-                          <SelectItem value="Supplies">Supplies</SelectItem>
-                          <SelectItem value="Staff">Staff</SelectItem>
-                          <SelectItem value="Marketing">Marketing</SelectItem>
-                          <SelectItem value="Insurance">Insurance</SelectItem>
-                          <SelectItem value="Maintenance">
-                            Maintenance
-                          </SelectItem>
-                          <SelectItem value="Software">Software</SelectItem>
-                          <SelectItem value="Other">Other</SelectItem>
+                          <SelectItem value="equipment">Equipment</SelectItem>
+                          <SelectItem value="utilities">Utilities</SelectItem>
+                          <SelectItem value="rent">Rent</SelectItem>
+                          <SelectItem value="supplies">Supplies</SelectItem>
+                          <SelectItem value="staff">Staff</SelectItem>
+                          <SelectItem value="marketing">Marketing</SelectItem>
+                          <SelectItem value="insurance">Insurance</SelectItem>
+                          <SelectItem value="maintenance">Maintenance</SelectItem>
+                          <SelectItem value="software">Software</SelectItem>
+                          <SelectItem value="other">Other</SelectItem>
                         </SelectContent>
                       </Select>
                     </FormControl>
@@ -210,7 +226,7 @@ export function ExpenseFormModal({
                         value={field.value}
                       >
                         <SelectTrigger className="w-full">
-                          <SelectValue placeholder="Select status" />
+                          <SelectValue placeholder="Select status" labels={statusLabels} />
                         </SelectTrigger>
                         <SelectContent align="start">
                           <SelectItem value="paid">Paid</SelectItem>

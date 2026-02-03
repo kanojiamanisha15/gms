@@ -168,9 +168,7 @@ export default function RegisterPage() {
                           className="w-full" 
                           disabled={registerMutation.isPending}
                         >
-                          <SelectValue placeholder="Select a role">
-                            {field.value ? roleLabels[field.value] || field.value : "Select a role"}
-                          </SelectValue>
+                          <SelectValue placeholder="Select a role" labels={roleLabels} />
                         </SelectTrigger>
                         <SelectContent align="start">
                           <SelectItem value="user">User</SelectItem>

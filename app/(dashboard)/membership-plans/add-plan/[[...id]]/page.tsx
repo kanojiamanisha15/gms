@@ -34,6 +34,17 @@ type MembershipPlanFormData = {
   status: "active" | "inactive";
 };
 
+const durationLabels: Record<string, string> = {
+  "1 month": "1 month",
+  "3 months": "3 months",
+  "6 months": "6 months",
+  "1 year": "1 year",
+};
+const statusLabels: Record<MembershipPlanFormData["status"], string> = {
+  active: "Active",
+  inactive: "Inactive",
+};
+
 // Mock plans data - in a real app, this would be fetched from an API
 const mockPlans: MembershipPlan[] = [
   {
@@ -276,7 +287,7 @@ export default function AddMembershipPlanPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select duration" />
+                              <SelectValue placeholder="Select duration" labels={durationLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
                               <SelectItem value="1 month">1 month</SelectItem>
@@ -306,7 +317,7 @@ export default function AddMembershipPlanPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select status" />
+                              <SelectValue placeholder="Select status" labels={statusLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
                               <SelectItem value="active">Active</SelectItem>

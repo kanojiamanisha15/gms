@@ -30,9 +30,18 @@ type TrainerFormData = {
   name: string;
   email: string;
   phone: string;
-  role: "Trainer" | "Staff";
+  role: "trainer" | "staff";
   hireDate: string;
   status: "active" | "inactive";
+};
+
+const roleLabels: Record<TrainerFormData["role"], string> = {
+  trainer: "Trainer",
+  staff: "Staff",
+};
+const statusLabels: Record<TrainerFormData["status"], string> = {
+  active: "Active",
+  inactive: "Inactive",
 };
 
 const mockTrainers: Trainer[] = [
@@ -84,7 +93,7 @@ export default function AddTrainerPage() {
       name: "",
       email: "",
       phone: "",
-      role: "Trainer",
+      role: "trainer",
       hireDate: new Date().toISOString().split("T")[0],
       status: "active",
     },
@@ -96,7 +105,7 @@ export default function AddTrainerPage() {
         name: trainer.name,
         email: trainer.email,
         phone: trainer.phone,
-        role: trainer.role,
+        role: trainer.role as "trainer" | "staff",
         hireDate: trainer.hireDate,
         status: trainer.status,
       });
@@ -269,11 +278,11 @@ export default function AddTrainerPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select role" />
+                              <SelectValue placeholder="Select role" labels={roleLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
-                              <SelectItem value="Trainer">Trainer</SelectItem>
-                              <SelectItem value="Staff">Staff</SelectItem>
+                              <SelectItem value="trainer">Trainer</SelectItem>
+                              <SelectItem value="staff">Staff</SelectItem>
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -314,7 +323,7 @@ export default function AddTrainerPage() {
                             value={field.value}
                           >
                             <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select status" />
+                              <SelectValue placeholder="Select status" labels={statusLabels} />
                             </SelectTrigger>
                             <SelectContent align="start">
                               <SelectItem value="active">Active</SelectItem>

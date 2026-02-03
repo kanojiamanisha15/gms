@@ -42,6 +42,14 @@ import {
   TableRow,
 } from "@/components/ui/table";
 
+const PAGE_SIZE_LABELS: Record<string, string> = {
+  "10": "10",
+  "20": "20",
+  "30": "30",
+  "50": "50",
+  "100": "100",
+};
+
 export interface DataTableProps<TData, TValue> {
   columns: ColumnDef<TData, TValue>[];
   data: TData[];
@@ -264,11 +272,7 @@ export function DataTable<TData, TValue>({
                     }}
                   >
                     <SelectTrigger className="h-8 w-[70px]">
-                      <SelectValue
-                        placeholder={String(
-                          table.getState().pagination.pageSize
-                        )}
-                      />
+                      <SelectValue placeholder="Rows" labels={PAGE_SIZE_LABELS} />
                     </SelectTrigger>
                     <SelectContent side="top" align="start">
                       {[10, 20, 30, 50, 100].map((pageSize) => (

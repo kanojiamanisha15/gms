@@ -1,14 +1,43 @@
 "use client";
 
+import { useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { AppSidebar } from "@/components/ui/app-sidebar";
 import { SiteHeader } from "@/components/ui/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
+import { useCurrentUser } from "@/hooks/use-auth";
+import { Skeleton } from "@/components/ui/skeleton";
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const router = useRouter();
+  const { data: user, isLoading, isError, isFetched } = useCurrentUser();
+
+  useEffect(() => {
+    if (isFetched && (isError || !user)) {
+      router.replace("/login");
+    }
+  }, [isFetched, isError, user, router]);
+
+  if (isLoading) {
+    return (
+      <div className="flex h-screen items-center justify-center">
+        <div className="flex flex-col items-center gap-4">
+          <Skeleton className="h-10 w-10 rounded-full" />
+          <Skeleton className="h-4 w-32" />
+          <Skeleton className="h-4 w-48" />
+        </div>
+      </div>
+    );
+  }
+
+  if (isFetched && (isError || !user)) {
+    return null;
+  }
+
   return (
     <SidebarProvider
       style={
@@ -18,7 +47,7 @@ export default function DashboardLayout({
         } as React.CSSProperties
       }
     >
-      <AppSidebar variant="inset" />
+      <AppSidebar user={user} variant="inset" />
       <SidebarInset>
         <SiteHeader />
         {children}

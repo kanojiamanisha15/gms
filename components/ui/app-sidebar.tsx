@@ -27,12 +27,13 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar";
 
+const defaultUser = {
+  name: "User",
+  email: "",
+  avatar: "",
+};
+
 const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
   navMain: [
     {
       title: "Dashboard",
@@ -79,7 +80,25 @@ const data = {
   ],
 };
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
+  user?: {
+    id: number;
+    name: string;
+    email: string;
+    role?: string;
+    created_at?: Date;
+  };
+};
+
+export function AppSidebar({ user: userProp, ...props }: AppSidebarProps) {
+  const user = userProp
+    ? {
+        name: userProp.name,
+        email: userProp.email,
+        avatar: "",
+      }
+    : defaultUser;
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
@@ -102,7 +121,7 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
         <NavSecondary items={data.navSecondary} className="mt-auto" />
       </SidebarContent>
       <SidebarFooter>
-        <NavUser user={data.user} />
+        <NavUser user={user} />
       </SidebarFooter>
     </Sidebar>
   );

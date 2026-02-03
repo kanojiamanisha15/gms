@@ -24,9 +24,9 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Member, mockMembers } from "../../members-table";
-import { mockPlans } from "../../../membership-plans/membership-plans-table";
-import { generateMemberId } from "@/helpers/generateMemberId";
+import { Member, mockMembers } from "@/components/features/members/members-table";
+import { mockPlans } from "@/components/features/membership-plans/membership-plans-table";
+import { generateMemberId } from "@/lib/utils/member-id";
 
 // Helper function to calculate expiration date based on join date and membership duration
 function calculateExpirationDate(

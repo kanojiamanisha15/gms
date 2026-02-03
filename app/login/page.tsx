@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Button } from "@/components/ui/button";
 import {
   Form,
@@ -19,6 +20,7 @@ import {
 } from "@/components/ui/form";
 import { useForm } from "react-hook-form";
 import Link from "next/link";
+import { useLogin } from "@/hooks/use-auth";
 
 type LoginFormValues = {
   email: string;
@@ -26,6 +28,7 @@ type LoginFormValues = {
 };
 
 export default function LoginPage() {
+  const loginMutation = useLogin();
   const form = useForm<LoginFormValues>({
     defaultValues: {
       email: "",
@@ -34,8 +37,10 @@ export default function LoginPage() {
   });
 
   const onSubmit = (data: LoginFormValues) => {
-    console.log(data);
-    // Handle login logic here
+    loginMutation.mutate({
+      email: data.email,
+      password: data.password,
+    });
   };
 
   return (
@@ -68,6 +73,7 @@ export default function LoginPage() {
                         type="email"
                         placeholder="name@example.com"
                         {...field}
+                        disabled={loginMutation.isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -96,18 +102,18 @@ export default function LoginPage() {
                       </Link>
                     </div>
                     <FormControl>
-                      <Input
-                        type="password"
+                      <PasswordInput
                         placeholder="Enter your password"
                         {...field}
+                        disabled={loginMutation.isPending}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full">
-                Sign in
+              <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
+                {loginMutation.isPending ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </Form>
@@ -115,9 +121,12 @@ export default function LoginPage() {
             <span className="text-muted-foreground">
               Don&apos;t have an account?{" "}
             </span>
-            <a href="#" className="text-primary hover:underline font-medium">
+            <Link
+              href="/register"
+              className="text-primary hover:underline font-medium"
+            >
               Sign up
-            </a>
+            </Link>
           </div>
         </CardContent>
       </Card>

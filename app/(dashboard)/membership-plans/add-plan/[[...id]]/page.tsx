@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { MembershipPlan } from "../../membership-plans-table";
+import { MembershipPlan } from "@/components/features/membership-plans/membership-plans-table";
 
 type MembershipPlanFormData = {
   name: string;

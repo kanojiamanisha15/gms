@@ -2,6 +2,31 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Getting Started
 
+### Environment Setup
+
+1. **Copy the environment template:**
+   ```bash
+   cp .env.example .env.local
+   ```
+
+2. **Update `.env.local` with your configuration:**
+   - **Database**: Update `DB_HOST`, `DB_PORT`, `DB_NAME`, `DB_USER`, and `DB_PASSWORD` to match your PostgreSQL database
+   - **JWT Secret**: Generate a strong secret key for production:
+     ```bash
+     openssl rand -base64 32
+     ```
+   - **App URL**: Update `NEXT_PUBLIC_APP_URL` if your app runs on a different port or domain
+
+3. **Environment Variables:**
+   - `.env.local` - Your local development environment (not committed to git)
+   - `.env.example` - Template file with all required variables (committed to git)
+
+### Database Setup
+
+See [DATABASE_SETUP.md](./DATABASE_SETUP.md) for detailed database setup instructions.
+
+### Running the Development Server
+
 First, run the development server:
 
 ```bash

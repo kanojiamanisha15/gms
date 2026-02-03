@@ -24,7 +24,7 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Trainer } from "../../trainers-table";
+import { Trainer } from "@/components/features/trainers-staff/trainers-table";
 
 type TrainerFormData = {
   name: string;

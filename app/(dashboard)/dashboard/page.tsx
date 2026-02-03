@@ -1,13 +1,24 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { ColumnDef } from "@tanstack/react-table";
-import { DataTable } from "@/components/ui/data-table";
 import { SectionCards } from "@/components/ui/section-cards";
 import { Badge } from "@/components/ui/badge";
-import { mockMembers } from "../members/members-table";
-import { mockPlans } from "../membership-plans/membership-plans-table";
-import { FinancialChart } from "./financial-chart";
+import { mockMembers } from "@/components/features/members/members-table";
+import { mockPlans } from "@/components/features/membership-plans/membership-plans-table";
+import { ChartSkeleton, TableSkeleton } from "@/lib/utils/lazy-loading";
+
+// Lazy load heavy components
+const DataTable = dynamic(() => import("@/components/ui/data-table").then(mod => ({ default: mod.DataTable })), {
+  loading: () => <TableSkeleton />,
+  ssr: false,
+});
+
+const FinancialChart = dynamic(() => import("@/components/features/dashboard/financial-chart").then(mod => ({ default: mod.FinancialChart })), {
+  loading: () => <ChartSkeleton />,
+  ssr: false,
+});
 
 type ExpiringMember = {
   id: string;

@@ -1,5 +1,6 @@
-// Helper function to generate 5-character unique ID from join date and sequential number
-// Format: YXXYY where Y = last digit of year, XX = 2-letter month code, YY = sequential (00-99)
+/** Helper function to generate 5-character unique ID from join date and sequential number
+ * Format: YXXYY where Y = last digit of year, XX = 2-letter month code, YY = sequential (00-99)
+ */
 export function generateMemberId(
   joinDate: string,
   sequentialNumber: number

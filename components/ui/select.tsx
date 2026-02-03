@@ -69,14 +69,15 @@ function SelectGroup({
 
 function SelectValue({
   placeholder,
+  children,
   ...props
-}: { placeholder?: string } & React.HTMLAttributes<HTMLSpanElement>) {
+}: { placeholder?: string; children?: React.ReactNode } & React.HTMLAttributes<HTMLSpanElement>) {
   const context = React.useContext(SelectContext);
   if (!context) throw new Error("SelectValue must be used within Select");
 
   return (
     <span data-slot="select-value" {...props}>
-      {context.value || placeholder}
+      {children !== undefined ? children : (context.value || placeholder)}
     </span>
   );
 }

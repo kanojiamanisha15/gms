@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import dynamic from "next/dynamic";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
@@ -9,8 +10,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil } from "lucide-react";
-import { ExpenseFormModal } from "./expense-form-modal";
 import dayjs from "dayjs";
+
+// Lazy load the expense form modal (only loads when opened)
+const ExpenseFormModal = dynamic(() => import("./expense-form-modal").then(mod => ({ default: mod.ExpenseFormModal })), {
+  ssr: false,
+});
 
 function ActionsCell({
   expense,

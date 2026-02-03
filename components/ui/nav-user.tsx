@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useLogout } from "@/hooks/use-auth";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,6 +37,11 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
+  const logoutMutation = useLogout();
+
+  const handleLogout = () => {
+    logoutMutation.mutate();
+  };
 
   return (
     <SidebarMenu>
@@ -99,9 +105,12 @@ export function NavUser({
               </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className={logoutMutation.isPending ? "pointer-events-none opacity-70" : ""}
+            >
               <LogOut />
-              Log out
+              {logoutMutation.isPending ? "Logging out..." : "Log out"}
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>

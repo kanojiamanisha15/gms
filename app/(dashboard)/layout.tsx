@@ -6,7 +6,7 @@ import { AppSidebar } from "@/components/ui/app-sidebar";
 import { SiteHeader } from "@/components/ui/site-header";
 import { SidebarInset, SidebarProvider } from "@/components/ui/sidebar";
 import { useCurrentUser } from "@/hooks/use-auth";
-import { Skeleton } from "@/components/ui/skeleton";
+import { PageLoader } from "@/components/ui/page-loader";
 
 export default function DashboardLayout({
   children,
@@ -23,15 +23,7 @@ export default function DashboardLayout({
   }, [isFetched, isError, user, router]);
 
   if (isLoading) {
-    return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="flex flex-col items-center gap-4">
-          <Skeleton className="h-10 w-10 rounded-full" />
-          <Skeleton className="h-4 w-32" />
-          <Skeleton className="h-4 w-48" />
-        </div>
-      </div>
-    );
+    return <PageLoader message="Loading..." />;
   }
 
   if (isFetched && (isError || !user)) {

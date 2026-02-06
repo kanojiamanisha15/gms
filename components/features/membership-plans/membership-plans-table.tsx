@@ -1,99 +1,65 @@
 "use client";
 
-import * as React from "react";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { EditButton } from "@/components/ui/edit-button";
 import { DeleteButton } from "@/components/ui/delete-button";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  doGetMembershipPlans,
+  doDeleteMembershipPlan,
+} from "@/lib/services/membership-plans";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useAppSelector, useMembershipPlansTableActions } from "@/lib/store";
+import { toast } from "sonner";
+import type { IMembershipPlanData } from "@/types";
 
-function ActionsCell({ plan }: { plan: MembershipPlan }) {
-  const handleDelete = (id: string) => {
-    // Handle delete action
-    console.log("Delete membership plan:", id);
+function ActionsCell({ plan }: { plan: IMembershipPlanData }) {
+  const queryClient = useQueryClient();
+  const deleteMutation = useMutation({
+    mutationFn: (id: number | string) => doDeleteMembershipPlan(id),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("Membership plan deleted successfully");
+        queryClient.invalidateQueries({ queryKey: ["membership-plans"] });
+      } else {
+        toast.error(response.error || "Failed to delete membership plan");
+      }
+    },
+    onError: (error) => {
+      console.error("Error deleting membership plan:", error);
+      toast.error("Failed to delete membership plan. Please try again.");
+    },
+  });
+
+  const handleDelete = async (id: string): Promise<void> => {
+    try {
+      await deleteMutation.mutateAsync(id);
+    } catch (error) {
+      // Error is handled by onError callback
+    }
   };
 
   return (
     <div className="flex items-center gap-2">
       <EditButton
-        id={plan.id}
+        id={String(plan.id)}
         editPath="/membership-plans/add-plan"
         entityName="membership plan"
       />
       <DeleteButton
-        id={plan.id}
+        id={String(plan.id)}
         onDelete={handleDelete}
         entityName="membership plan"
         itemName={plan.name}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
 }
 
-export type MembershipPlan = {
-  id: string;
-  name: string;
-  price: number;
-  duration: string;
-  features: string;
-  status: "active" | "inactive";
-};
-
-export const mockPlans: MembershipPlan[] = [
-  {
-    id: "1",
-    name: "Basic",
-    price: 29.99,
-    duration: "1 month",
-    features: "Access to gym facilities, Basic equipment",
-    status: "active",
-  },
-  {
-    id: "2",
-    name: "Standard",
-    price: 79.99,
-    duration: "3 months",
-    features: "Access to gym facilities, All equipment, Group classes",
-    status: "active",
-  },
-  {
-    id: "3",
-    name: "Premium",
-    price: 299.99,
-    duration: "1 year",
-    features:
-      "Access to gym facilities, All equipment, Group classes, Personal trainer sessions, Nutrition consultation",
-    status: "active",
-  },
-  {
-    id: "4",
-    name: "Student",
-    price: 19.99,
-    duration: "1 month",
-    features: "Access to gym facilities, Basic equipment (Student ID required)",
-    status: "active",
-  },
-  {
-    id: "5",
-    name: "Senior",
-    price: 24.99,
-    duration: "1 month",
-    features:
-      "Access to gym facilities, Basic equipment, Senior-friendly classes",
-    status: "active",
-  },
-  {
-    id: "6",
-    name: "Corporate",
-    price: 249.99,
-    duration: "1 year",
-    features:
-      "Access to gym facilities, All equipment, Group classes, Corporate wellness programs",
-    status: "inactive",
-  },
-];
-
-const columns: ColumnDef<MembershipPlan>[] = [
+const columns: ColumnDef<IMembershipPlanData>[] = [
   {
     accessorKey: "name",
     header: "Plan Name",
@@ -105,7 +71,7 @@ const columns: ColumnDef<MembershipPlan>[] = [
     accessorKey: "price",
     header: "Price",
     cell: ({ row }) => {
-      const price = parseFloat(row.getValue("price"));
+      const price = parseFloat(String(row.getValue("price")));
       return <div>Rs.{price.toFixed(2)}</div>;
     },
   },
@@ -122,7 +88,7 @@ const columns: ColumnDef<MembershipPlan>[] = [
     cell: ({ row }) => {
       const features = row.getValue("features") as string;
       return (
-        <div className="max-w-md text-sm text-muted-foreground">{features}</div>
+        <div className="max-w-md text-sm text-muted-foreground">{features ?? ""}</div>
       );
     },
   },
@@ -158,14 +124,44 @@ const columns: ColumnDef<MembershipPlan>[] = [
 ];
 
 export function MembershipPlansTable() {
+  const { setSearchInput, setPage, setLimit } = useMembershipPlansTableActions();
+  const searchInput = useAppSelector((s) => s.membershipPlansTable.searchInput);
+  const page = useAppSelector((s) => s.membershipPlansTable.page);
+  const limit = useAppSelector((s) => s.membershipPlansTable.limit);
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["membership-plans", debouncedSearch, page, limit],
+    queryFn: () =>
+      doGetMembershipPlans({
+        search: debouncedSearch || undefined,
+        page,
+        limit,
+      }),
+  });
+  const plans: IMembershipPlanData[] = data?.plans ?? [];
+
   return (
     <DataTable
       columns={columns}
-      data={mockPlans}
+      data={plans}
       searchPlaceholder="Search membership plans..."
       addButtonLabel="Add Membership Plan"
       addButtonHref="/membership-plans/add-plan"
       entityName="membership plan"
+      serverSideSearch
+      searchValue={searchInput}
+      onSearchChange={setSearchInput}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      serverSidePagination
+      page={page}
+      limit={limit}
+      total={data?.total}
+      totalPages={data?.totalPages}
+      onPageChange={setPage}
+      onLimitChange={setLimit}
     />
   );
 }

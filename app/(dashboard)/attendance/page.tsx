@@ -5,13 +5,10 @@ import dynamic from "next/dynamic";
 import { PageContent } from "@/components/ui/page-content";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { TableSkeleton } from "@/lib/utils/lazy-loading";
-
-// Lazy load the attendance table
-const AttendanceTable = dynamic(() => import("@/components/features/attendance/attendance-table").then(mod => ({ default: mod.AttendanceTable })), {
-  loading: () => <TableSkeleton />,
-  ssr: false,
-});
+const AttendanceTable = dynamic(
+  () => import("@/components/features/attendance/attendance-table").then((mod) => ({ default: mod.AttendanceTable })),
+  { ssr: false }
+);
 
 export default function AttendancePage() {
   // Get today's date in YYYY-MM-DD format

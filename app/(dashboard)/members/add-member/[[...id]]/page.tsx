@@ -2,7 +2,7 @@
 
 import { useRouter, useParams } from "next/navigation";
 import { useForm } from "react-hook-form";
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { PageContent } from "@/components/ui/page-content";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,52 +24,10 @@ import {
 } from "@/components/ui/form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
-import { Member, mockMembers } from "@/components/features/members/members-table";
-import { mockPlans } from "@/components/features/membership-plans/membership-plans-table";
-import { generateMemberId } from "@/lib/utils/member-id";
-
-// Helper function to calculate expiration date based on join date and membership duration
-function calculateExpirationDate(
-  joinDate: string,
-  membershipType: string
-): string {
-  const join = new Date(joinDate);
-  const plan = mockPlans.find((p) => p.name === membershipType);
-
-  if (!plan) {
-    // Default to 1 month if plan not found
-    join.setMonth(join.getMonth() + 1);
-    return join.toISOString().split("T")[0];
-  }
-
-  const duration = plan.duration;
-  if (duration.includes("year")) {
-    join.setFullYear(join.getFullYear() + 1);
-  } else if (duration.includes("month")) {
-    const months = parseInt(duration.split(" ")[0]) || 1;
-    join.setMonth(join.getMonth() + months);
-  }
-
-  return join.toISOString().split("T")[0];
-}
-
-// Helper function to get the next sequential number for a given join date
-function getNextSequentialNumber(joinDate: string): number {
-  const date = new Date(joinDate);
-  const year = date.getFullYear();
-  const month = date.getMonth() + 1;
-
-  // Filter existing members with the same year and month
-  const sameMonthMembers = mockMembers.filter((member) => {
-    const memberDate = new Date(member.joinDate);
-    return (
-      memberDate.getFullYear() === year && memberDate.getMonth() + 1 === month
-    );
-  });
-
-  // Return the count + 1 for the next sequential number
-  return sameMonthMembers.length + 1;
-}
+import { useMember, useCreateMember, useUpdateMember } from "@/hooks/use-members";
+import { useAllMembershipPlans } from "@/hooks/use-membership-plans";
+import { formatDateForInput, calculateExpirationDate } from "@/lib/helpers";
+import { PhoneInput } from "@/components/ui/phone-input";
 
 type MemberFormData = {
   name: string;
@@ -83,11 +41,6 @@ type MemberFormData = {
   paymentAmount: number;
 };
 
-const membershipTypeLabels: Record<string, string> = {
-  basic: "Basic",
-  standard: "Standard",
-  premium: "Premium",
-};
 const statusLabels: Record<MemberFormData["status"], string> = {
   active: "Active",
   inactive: "Inactive",
@@ -102,12 +55,23 @@ export default function AddMemberPage() {
   const router = useRouter();
   const params = useParams();
 
-  console.log("Params:", params);
   // Handle catch-all route: params.id will be an array or undefined
   const memberId = Array.isArray(params?.id) ? params.id[0] : params?.id;
   const isEditMode = !!memberId;
-  const [member, setMember] = useState<Member | null>(null);
-  const [loading, setLoading] = useState(isEditMode);
+
+  const {
+    data: apiMember,
+    isLoading: isMemberLoading,
+    isError: isMemberError,
+    error: memberError,
+  } = useMember(memberId);
+  const createMutation = useCreateMember();
+  const updateMutation = useUpdateMember();
+  const { data: plansData } = useAllMembershipPlans();
+  const plans = plansData?.plans ?? [];
+
+  const isSubmitting = createMutation.isPending || updateMutation.isPending;
+  const submitError = createMutation.error ?? updateMutation.error;
 
   const form = useForm<MemberFormData>({
     defaultValues: {
@@ -123,107 +87,66 @@ export default function AddMemberPage() {
     },
   });
 
-  // Calculate expiry date when join date or membership type changes
+  // Calculate expiry date when join date or membership type changes (only in add mode)
   const joinDate = form.watch("joinDate");
   const membershipType = form.watch("membershipType");
 
   useEffect(() => {
-    if (joinDate && membershipType) {
-      const calculatedExpiry = calculateExpirationDate(
-        joinDate,
-        membershipType
-      );
+    // Only auto-calculate expiry date when adding a new member, not when editing
+    if (!isEditMode && joinDate && membershipType && plans.length > 0) {
+      const duration = plans.find((p) => p.name === membershipType)?.duration;
+      const calculatedExpiry = calculateExpirationDate(joinDate, duration);
       form.setValue("expiryDate", calculatedExpiry);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [joinDate, membershipType]);
+  }, [joinDate, membershipType, isEditMode, plans]);
 
+  // Populate form when member data is loaded (edit mode)
   useEffect(() => {
+    if (!apiMember || !isEditMode) return;
+
+    form.reset({
+      name: apiMember.name,
+      email: apiMember.email ?? "",
+      phone: apiMember.phone ?? "",
+      membershipType: apiMember.membershipType,
+      joinDate: formatDateForInput(apiMember.joinDate),
+      expiryDate: formatDateForInput(apiMember.expiryDate),
+      status: apiMember.status as MemberFormData["status"],
+      paymentStatus: apiMember.paymentStatus as MemberFormData["paymentStatus"],
+      paymentAmount: apiMember.paymentAmount,
+    });
+  }, [apiMember, isEditMode, form]);
+
+  const onSubmit = (data: MemberFormData) => {
+    const payload = {
+      name: data.name.trim(),
+      email: data.email?.trim() || null,
+      phone: data.phone?.trim(),
+      membershipType: data.membershipType,
+      joinDate: data.joinDate,
+      expiryDate: data.expiryDate,
+      status: data.status,
+      paymentStatus: data.paymentStatus,
+      paymentAmount: data.paymentAmount,
+    };
+
     if (isEditMode && memberId) {
-      // In a real app, this would be an API call
-      const foundMember = mockMembers.find((m) => m.id === memberId);
-
-      if (foundMember) {
-        setMember(foundMember);
-        form.reset({
-          name: foundMember.name,
-          email: foundMember.email,
-          phone: foundMember.phone,
-          membershipType: foundMember.membershipType,
-          joinDate: foundMember.joinDate,
-          expiryDate: foundMember.expiryDate,
-          status: foundMember.status,
-          paymentStatus: foundMember.paymentStatus,
-          paymentAmount: foundMember.paymentAmount,
-        });
-      }
-      setLoading(false);
-    }
-  }, [isEditMode, memberId, form]);
-
-  const onSubmit = async (data: MemberFormData) => {
-    try {
-      if (isEditMode) {
-        // TODO: Replace with actual API call
-        console.log("Updating member:", memberId, data);
-      } else {
-        // Generate unique member ID using join date and sequential number
-        const sequentialNumber = getNextSequentialNumber(data.joinDate);
-        const newMemberId = generateMemberId(data.joinDate, sequentialNumber);
-
-        // TODO: Replace with actual API call
-        console.log("Adding member:", {
-          ...data,
-          id: newMemberId,
-        });
-      }
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Redirect back to members page after successful submission
-      router.push("/members");
-    } catch (error) {
-      console.error(
-        `Error ${isEditMode ? "updating" : "adding"} member:`,
-        error
+      updateMutation.mutate(
+        { memberId, data: payload },
+        { onSuccess: () => router.push("/members") }
       );
+    } else {
+      createMutation.mutate(payload, {
+        onSuccess: () => router.push("/members"),
+      });
     }
   };
 
-  if (loading) {
-    return (
-      <PageContent
-        title={isEditMode ? "Edit Member" : "Add Member"}
-        description={
-          isEditMode
-            ? "Edit member information"
-            : "Add a new member to your gym"
-        }
-      >
-        <div className="px-4 lg:px-6">Loading...</div>
-      </PageContent>
-    );
-  }
-
-  if (isEditMode && !member) {
-    return (
-      <PageContent title="Edit Member" description="Edit member information">
-        <div className="px-4 lg:px-6">
-          <Card>
-            <CardContent className="pt-6">
-              <p>Member not found</p>
-              <Link href="/members">
-                <Button variant="outline" className="mt-4">
-                  Back to Members
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        </div>
-      </PageContent>
-    );
-  }
+  const showForm = !isEditMode || (isEditMode && apiMember);
+  const showLoading = isMemberLoading && isEditMode;
+  const showError = isMemberError;
+  const showNotFound = isEditMode && !apiMember && !isMemberLoading && !isMemberError;
 
   return (
     <PageContent
@@ -241,6 +164,35 @@ export default function AddMemberPage() {
       }
     >
       <div className="px-4 lg:px-6 space-y-4">
+        {showLoading ? <div>Loading...</div>:
+        showError ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p className="text-destructive">
+                {memberError instanceof Error
+                  ? memberError.message
+                  : "Failed to fetch member. Please try again."}
+              </p>
+              <Link href="/members">
+                <Button variant="outline" className="mt-4">
+                  Back to Members
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : showNotFound ? (
+          <Card>
+            <CardContent className="pt-6">
+              <p>Member not found</p>
+              <Link href="/members">
+                <Button variant="outline" className="mt-4">
+                  Back to Members
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        ) : 
+        showForm ? (
         <Card>
           <CardContent>
             <Form {...form}>
@@ -287,7 +239,6 @@ export default function AddMemberPage() {
                       </FormItem>
                     )}
                     rules={{
-                      required: "Email is required",
                       pattern: {
                         value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
                         message: "Invalid email address",
@@ -302,11 +253,7 @@ export default function AddMemberPage() {
                       <FormItem>
                         <FormLabel>Phone</FormLabel>
                         <FormControl>
-                          <Input
-                            type="tel"
-                            placeholder="+1 234-567-8900"
-                            {...field}
-                          />
+                          <PhoneInput {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -327,13 +274,17 @@ export default function AddMemberPage() {
                             onValueChange={field.onChange}
                             value={field.value}
                           >
-                            <SelectTrigger className="w-full">
-                              <SelectValue placeholder="Select membership type" labels={membershipTypeLabels} />
+                            <SelectTrigger className="w-full" disabled={plans.length === 0}>
+                              <SelectValue placeholder={plans.length === 0 ? "Loading plans..." : "Select membership type"} />
                             </SelectTrigger>
                             <SelectContent align="start">
-                              <SelectItem value="basic">Basic</SelectItem>
-                              <SelectItem value="standard">Standard</SelectItem>
-                              <SelectItem value="premium">Premium</SelectItem>
+                              {plans
+                                .filter((p) => p.status === "active")
+                                .map((plan) => (
+                                  <SelectItem key={plan.id} value={plan.name}>
+                                    {plan.name}
+                                  </SelectItem>
+                                ))}
                             </SelectContent>
                           </Select>
                         </FormControl>
@@ -468,14 +419,21 @@ export default function AddMemberPage() {
                   />
                 </div>
 
+                {submitError && (
+                  <p className="text-sm text-destructive">
+                    {submitError instanceof Error
+                      ? submitError.message
+                      : "An error occurred. Please try again."}
+                  </p>
+                )}
                 <div className="flex items-center gap-4 justify-end">
                   <Link href="/members">
-                    <Button type="button" variant="outline">
+                    <Button type="button" variant="outline" disabled={isSubmitting}>
                       Cancel
                     </Button>
                   </Link>
-                  <Button type="submit" disabled={form.formState.isSubmitting}>
-                    {form.formState.isSubmitting
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting
                       ? isEditMode
                         ? "Updating..."
                         : "Adding..."
@@ -488,6 +446,7 @@ export default function AddMemberPage() {
             </Form>
           </CardContent>
         </Card>
+        ) : null}
       </div>
     </PageContent>
   );

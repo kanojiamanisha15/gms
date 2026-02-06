@@ -1,5 +1,6 @@
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { NextRequest, NextResponse } from 'next/server';
 import type { TokenPayload } from '@/types/auth';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
@@ -24,7 +25,7 @@ export async function comparePassword(
 
 /** Generate a JWT token*/
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload, JWT_SECRET, {
+  return jwt.sign(payload as object, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
   });
 }
@@ -36,4 +37,34 @@ export function verifyToken(token: string): TokenPayload | null {
   } catch (error) {
     return null;
   }
+}
+
+export type AuthResult = 
+  | { error: NextResponse; payload?: never }
+  | { payload: TokenPayload; error?: never };
+
+/** Require authentication for API routes. Returns error response or payload. */
+export function requireAuth(request: NextRequest): AuthResult {
+  const token = request.cookies.get('auth_token')?.value;
+  
+  if (!token) {
+    return { 
+      error: NextResponse.json(
+        { success: false, error: 'No token found' }, 
+        { status: 401 }
+      ) 
+    };
+  }
+  
+  const payload = verifyToken(token);
+  if (!payload) {
+    return { 
+      error: NextResponse.json(
+        { success: false, error: 'Invalid or expired token' }, 
+        { status: 401 }
+      ) 
+    };
+  }
+  
+  return { payload };
 }

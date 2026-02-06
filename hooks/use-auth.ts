@@ -87,5 +87,9 @@ export function useLogout() {
       toast.success("Logged out successfully");
       router.push("/login");
     },
+    onError: (error) => {
+      console.error("Logout error:", error);
+      toast.error("Failed to log out. Please try again.");
+    },
   });
 }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { authenticatedFetch } from "@/lib/services/api-client";
-import { API_BASE_URL, API_ENDPOINTS } from "@/lib/constants/api";
+import { getRequest, postRequest, putRequest, deleteRequest } from "@/lib/api";
+import { API_ENDPOINTS } from "@/lib/constants/api";
 import { toast } from "sonner";
 import type { User } from "@/types/auth";
 
@@ -12,7 +12,9 @@ export function useUsers() {
   return useQuery({
     queryKey: ["users"],
     queryFn: async () => {
-      const response = await authenticatedFetch(`${API_BASE_URL}${API_ENDPOINTS.USERS}`);
+      const response = await getRequest<{ success: boolean; data?: User[]; error?: string }>(
+        API_ENDPOINTS.USERS
+      );
       if (!response.success) {
         throw new Error(response.error || "Failed to fetch users");
       }
@@ -26,8 +28,8 @@ export function useUser(userId: number) {
   return useQuery({
     queryKey: ["users", userId],
     queryFn: async () => {
-      const response = await authenticatedFetch(
-        `${API_BASE_URL}${API_ENDPOINTS.USERS}/${userId}`
+      const response = await getRequest<{ success: boolean; data?: User; error?: string }>(
+        `${API_ENDPOINTS.USERS}/${userId}`
       );
       if (!response.success) {
         throw new Error(response.error || "Failed to fetch user");
@@ -46,10 +48,10 @@ export function useCreateUser() {
 
   return useMutation({
     mutationFn: async (userData: { name: string; email: string; role?: string }) => {
-      const response = await authenticatedFetch(`${API_BASE_URL}${API_ENDPOINTS.USERS}`, {
-        method: "POST",
-        data: userData,
-      });
+      const response = await postRequest<{ success: boolean; data?: User; error?: string }>(
+        API_ENDPOINTS.USERS,
+        userData
+      );
       if (!response.success) {
         throw new Error(response.error || "Failed to create user");
       }
@@ -75,14 +77,18 @@ export function useUpdateUser() {
       userData,
     }: {
       userId: number;
-      userData: { name?: string; email?: string; role?: string };
+      userData: {
+        name?: string;
+        email?: string;
+        role?: string;
+        currentPassword: string;
+        newPassword?: string;
+        confirmPassword?: string;
+      };
     }) => {
-      const response = await authenticatedFetch(
-        `${API_BASE_URL}${API_ENDPOINTS.USERS}/${userId}`,
-        {
-          method: "PUT",
-          data: userData,
-        }
+      const response = await putRequest<{ success: boolean; data?: User; error?: string }>(
+        `${API_ENDPOINTS.USERS}/${userId}`,
+        userData
       );
       if (!response.success) {
         throw new Error(response.error || "Failed to update user");
@@ -92,6 +98,7 @@ export function useUpdateUser() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ["users"] });
       queryClient.invalidateQueries({ queryKey: ["users", variables.userId] });
+      queryClient.invalidateQueries({ queryKey: ["currentUser"] });
       toast.success("User updated successfully");
     },
     onError: (error: Error) => {
@@ -106,11 +113,8 @@ export function useDeleteUser() {
 
   return useMutation({
     mutationFn: async (userId: number) => {
-      const response = await authenticatedFetch(
-        `${API_BASE_URL}${API_ENDPOINTS.USERS}/${userId}`,
-        {
-          method: "DELETE",
-        }
+      const response = await deleteRequest<{ success: boolean; error?: string }>(
+        `${API_ENDPOINTS.USERS}/${userId}`
       );
       if (!response.success) {
         throw new Error(response.error || "Failed to delete user");

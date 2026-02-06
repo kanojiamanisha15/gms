@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { Bell } from "lucide-react";
+import { Bell, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { SidebarTrigger } from "@/components/ui/sidebar";
@@ -14,34 +14,35 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
+import {
+  useNotifications,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+} from "@/hooks/use-notifications";
+import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
+
+dayjs.extend(relativeTime);
 
 export function SiteHeader() {
-  // Mock notification data - replace with real data from your state/API
-  const notifications = [
-    {
-      id: 1,
-      title: "New member registered",
-      message: "John Doe has joined the gym",
-      time: "2 minutes ago",
-      unread: true,
-    },
-    {
-      id: 2,
-      title: "Payment received",
-      message: "Monthly subscription payment from Jane Smith",
-      time: "1 hour ago",
-      unread: true,
-    },
-    {
-      id: 3,
-      title: "Class reminder",
-      message: "Yoga class starts in 30 minutes",
-      time: "3 hours ago",
-      unread: false,
-    },
-  ];
+  const { data: notifications = [], isLoading, isError } = useNotifications();
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
 
-  const unreadCount = notifications.filter((n) => n.unread).length;
+  const unreadCount = notifications.filter((n) => !n.read).length;
+  const recentNotifications = notifications.slice(0, 3);
+
+  const handleNotificationClick = (id: string, read: boolean) => {
+    if (!read) {
+      markReadMutation.mutate(id);
+    }
+  };
+
+  const handleMarkAllRead = () => {
+    if (unreadCount > 0) {
+      markAllReadMutation.mutate();
+    }
+  };
 
   return (
     <header className="flex h-(--header-height) shrink-0 items-center gap-2 border-b transition-[width,height] ease-linear group-has-data-[collapsible=icon]/sidebar-wrapper:h-(--header-height)">
@@ -69,38 +70,80 @@ export function SiteHeader() {
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end" className="w-80">
-              <DropdownMenuLabel>Notifications</DropdownMenuLabel>
+              <DropdownMenuLabel className="flex items-center justify-between">
+                <span>Notifications</span>
+                {unreadCount > 0 && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={(e) => {
+                      e.preventDefault();
+                      e.stopPropagation();
+                      handleMarkAllRead();
+                    }}
+                    disabled={markAllReadMutation.isPending}
+                  >
+                    {markAllReadMutation.isPending ? (
+                      <Loader2 className="h-3 w-3 animate-spin" />
+                    ) : (
+                      <>
+                        <Check className="h-3 w-3 mr-1" />
+                        Mark all read
+                      </>
+                    )}
+                  </Button>
+                )}
+              </DropdownMenuLabel>
               <DropdownMenuSeparator />
-              {notifications.length === 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center gap-2 p-6 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading notifications...
+                </div>
+              ) : isError ? (
+                <div className="p-4 text-center text-sm text-destructive">
+                  Failed to load notifications
+                </div>
+              ) : recentNotifications.length === 0 ? (
                 <div className="p-4 text-center text-sm text-muted-foreground">
                   No notifications
                 </div>
               ) : (
                 <div className="max-h-96 overflow-y-auto">
-                  {notifications.map((notification) => (
+                  {recentNotifications.map((notification) => (
                     <DropdownMenuItem
                       key={notification.id}
+                      asChild
                       className={cn(
                         "flex flex-col items-start gap-1 p-3 cursor-pointer",
-                        notification.unread && "bg-accent"
+                        !notification.read && "bg-accent"
                       )}
                     >
-                      <div className="flex w-full items-start justify-between gap-2">
-                        <div className="flex-1">
-                          <p className="text-sm font-medium">
-                            {notification.title}
-                          </p>
-                          <p className="text-xs text-muted-foreground">
-                            {notification.message}
-                          </p>
+                      <Link
+                        href="/notifications"
+                        onClick={() =>
+                          handleNotificationClick(notification.id, notification.read)
+                        }
+                        className="w-full"
+                      >
+                        <div className="flex w-full items-start justify-between gap-2">
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">
+                              {notification.title}
+                            </p>
+                            <p className="text-xs text-muted-foreground line-clamp-2">
+                              {notification.message}
+                            </p>
+                          </div>
+                          {!notification.read && (
+                            <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1" />
+                          )}
                         </div>
-                        {notification.unread && (
-                          <span className="h-2 w-2 rounded-full bg-primary shrink-0 mt-1" />
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {notification.time}
-                      </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {dayjs(notification.createdAt).fromNow()}
+                        </p>
+                      </Link>
                     </DropdownMenuItem>
                   ))}
                 </div>

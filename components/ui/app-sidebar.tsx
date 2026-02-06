@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Users,
@@ -8,10 +9,7 @@ import {
   CreditCard,
   Receipt,
   ClipboardCheck,
-  Settings,
-  HelpCircle,
   Layers,
-  BellRing,
 } from "lucide-react";
 
 import { NavMain } from "@/components/ui/nav-main";
@@ -25,6 +23,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 
 const defaultUser = {
@@ -91,6 +90,9 @@ type AppSidebarProps = React.ComponentProps<typeof Sidebar> & {
 };
 
 export function AppSidebar({ user: userProp, ...props }: AppSidebarProps) {
+  const pathname = usePathname();
+  const router = useRouter();
+  const { isMobile, setOpenMobile, setOpen } = useSidebar();
   const user = userProp
     ? {
         name: userProp.name,
@@ -99,19 +101,29 @@ export function AppSidebar({ user: userProp, ...props }: AppSidebarProps) {
       }
     : defaultUser;
 
+  const isOnDashboard = pathname === "/dashboard" || pathname === "/";
+  const closeSidebar = () => {
+    if (isMobile) setOpenMobile(false);
+    else setOpen(false);
+  };
+  const handleLogoClick = () => {
+    if (!isOnDashboard) {
+      closeSidebar();
+      router.push("/dashboard");
+    }
+  };
+
   return (
     <Sidebar collapsible="offcanvas" {...props}>
       <SidebarHeader>
         <SidebarMenu>
           <SidebarMenuItem>
             <SidebarMenuButton
-              asChild
-              className="data-[slot=sidebar-menu-button]:!p-1.5"
+              className="data-[slot=sidebar-menu-button]:!p-1.5 cursor-pointer"
+              onClick={!isOnDashboard ? handleLogoClick : undefined}
             >
-              <a href="#">
-                <Layers className="!size-5" />
-                <span className="text-base font-semibold">Acme Inc.</span>
-              </a>
+              <Layers className="!size-5" />
+              <span className="text-base font-semibold">Acme Inc.</span>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>

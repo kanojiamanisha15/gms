@@ -13,6 +13,7 @@ interface DeleteButtonProps {
   itemName?: string;
   className?: string;
   size?: "default" | "sm" | "lg" | "icon";
+  isLoading?: boolean;
 }
 
 export function DeleteButton({
@@ -22,11 +23,17 @@ export function DeleteButton({
   itemName,
   className,
   size = "icon",
+  isLoading = false,
 }: DeleteButtonProps) {
   const [open, setOpen] = React.useState(false);
 
-  const handleDelete = () => {
-    onDelete(id);
+  const handleDelete = async () => {
+    try {
+      await onDelete(id);
+      // Close dialog only on successful deletion
+      setOpen(false);
+    } catch (error) {
+    }
   };
 
   return (
@@ -39,6 +46,7 @@ export function DeleteButton({
           className
         )}
         onClick={() => setOpen(true)}
+        disabled={isLoading}
       >
         <Trash2 className="h-4 w-4" />
         <span className="sr-only">Delete {entityName}</span>
@@ -49,6 +57,7 @@ export function DeleteButton({
         onConfirm={handleDelete}
         entityName={entityName}
         itemName={itemName}
+        isLoading={isLoading}
       />
     </>
   );

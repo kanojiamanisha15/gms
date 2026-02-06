@@ -2,11 +2,11 @@
 
 import Link from "next/link";
 import {
-  CreditCard,
   MoreVertical,
   LogOut,
   BellRing,
   UserCircle,
+  SquareUserRound,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -46,12 +46,22 @@ export function NavUser({
     avatar: string;
   };
 }) {
-  const { isMobile } = useSidebar();
-  const logoutMutation = useLogout();
+  const { isMobile, setOpenMobile, setOpen } = useSidebar();
+
+  const closeSidebar = () => {
+    if (isMobile) setOpenMobile(false);
+    else setOpen(false);
+  };
+  const {
+    mutate: logout,
+    isPending,
+    isError,
+    error,
+  } = useLogout();
   const initials = getInitials(user.name);
 
   const handleLogout = () => {
-    logoutMutation.mutate();
+    logout();
   };
 
   return (
@@ -84,10 +94,9 @@ export function NavUser({
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar || undefined} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">{initials}</AvatarFallback>
-                </Avatar>
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-gray-100">
+                  <SquareUserRound className="h-5 w-5" />
+                </div>
                 <div className="grid flex-1 text-left text-sm leading-tight">
                   <span className="truncate font-medium">{user.name}</span>
                   <span className="text-muted-foreground truncate text-xs">
@@ -97,32 +106,33 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuGroup>
-              <DropdownMenuItem asChild>
+            <DropdownMenuGroup className="flex flex-col gap-2 p-2 text-sm">
+              <button onClick={closeSidebar}>
                 <Link href="/account" className="flex items-center gap-2">
-                  <UserCircle />
+                  <UserCircle className="!size-4"/>
                   Account
                 </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem>
-                <CreditCard />
-                Billing
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
+              </button>
+              <button onClick={closeSidebar}>
                 <Link href="/notifications" className="flex items-center gap-2">
-                  <BellRing />
+                  <BellRing className="!size-4"/>
                   Notifications
                 </Link>
-              </DropdownMenuItem>
+              </button>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem
               onClick={handleLogout}
-              className={logoutMutation.isPending ? "pointer-events-none opacity-70" : ""}
+              className={isPending ? "pointer-events-none opacity-70" : ""}
             >
               <LogOut />
-              {logoutMutation.isPending ? "Logging out..." : "Log out"}
+              {isPending ? "Logging out..." : "Log out"}
             </DropdownMenuItem>
+            {isError && (
+              <DropdownMenuItem className="text-destructive pointer-events-none">
+                {error instanceof Error ? error.message : "Logout failed"}
+              </DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
       </SidebarMenuItem>

@@ -1,6 +1,7 @@
 "use client";
 
 import * as React from "react";
+import { useForm } from "react-hook-form";
 import { PageContent } from "@/components/ui/page-content";
 import {
   Card,
@@ -11,22 +12,89 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { Label } from "@/components/ui/label";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Separator } from "@/components/ui/separator";
-import { Mail, Phone, MapPin, Calendar } from "lucide-react";
+import { Mail, Calendar, Loader2 } from "lucide-react";
+import { useCurrentUser } from "@/hooks/use-auth";
+import { useUpdateUser } from "@/hooks/use-users";
+
+type AccountFormValues = {
+  name: string;
+  email: string;
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+};
 
 export default function AccountPage() {
-  // Mock user data - in a real app, this would come from an API or context
-  const user = {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-    phone: "+1 234-567-8900",
-    address: "123 Main Street, City, State 12345",
-    joinDate: "2024-01-15",
-    role: "Administrator",
-  };
+  const { data: user, isLoading, isError, error } = useCurrentUser();
+  const updateUserMutation = useUpdateUser();
+
+  const form = useForm<AccountFormValues>({
+    defaultValues: {
+      name: "",
+      email: "",
+      currentPassword: "",
+      newPassword: "",
+      confirmPassword: "",
+    },
+  });
+
+  React.useEffect(() => {
+    if (user) {
+      form.reset({
+        name: user.name,
+        email: user.email,
+        currentPassword: "",
+        newPassword: "",
+        confirmPassword: "",
+      });
+    }
+  }, [user, form]);
+
+  if (isLoading) {
+    return (
+      <PageContent
+        title="Account"
+        description="Manage your account settings and profile information"
+      >
+        <div className="flex items-center justify-center gap-2 p-12 text-muted-foreground">
+          <Loader2 className="h-6 w-6 animate-spin" />
+          Loading account...
+        </div>
+      </PageContent>
+    );
+  }
+
+  if (isError || !user) {
+    return (
+      <PageContent
+        title="Account"
+        description="Manage your account settings and profile information"
+      >
+        <p className="px-4 text-sm text-destructive">
+          {error instanceof Error ? error.message : "Failed to load account"}
+        </p>
+      </PageContent>
+    );
+  }
+
+  const initials = user.name
+    .split(" ")
+    .map((n) => n[0])
+    .join("")
+    .toUpperCase()
+    .slice(0, 2);
 
   return (
     <PageContent
@@ -45,21 +113,13 @@ export default function AccountPage() {
           <CardContent className="space-y-6">
             <div className="flex items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="text-lg">
-                  {user.name
-                    .split(" ")
-                    .map((n) => n[0])
-                    .join("")
-                    .toUpperCase()}
-                </AvatarFallback>
+                <AvatarFallback className="text-lg">{initials}</AvatarFallback>
               </Avatar>
               <div className="flex-1">
                 <h3 className="text-lg font-semibold">{user.name}</h3>
-                <p className="text-sm text-muted-foreground">{user.role}</p>
-                <Button variant="outline" size="sm" className="mt-2">
-                  Change Avatar
-                </Button>
+                <p className="text-sm text-muted-foreground capitalize">
+                  {user.role ?? "User"}
+                </p>
               </div>
             </div>
 
@@ -67,7 +127,7 @@ export default function AccountPage() {
 
             <div className="space-y-4">
               <div className="flex items-center gap-3">
-                <Mail className="h-4 w-4 text-muted-foreground" />
+                <Mail className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div className="flex-1">
                   <Label className="text-xs text-muted-foreground">Email</Label>
                   <p className="text-sm font-medium">{user.email}</p>
@@ -75,31 +135,13 @@ export default function AccountPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Phone className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">Phone</Label>
-                  <p className="text-sm font-medium">{user.phone}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <MapPin className="h-4 w-4 text-muted-foreground" />
-                <div className="flex-1">
-                  <Label className="text-xs text-muted-foreground">
-                    Address
-                  </Label>
-                  <p className="text-sm font-medium">{user.address}</p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-3">
-                <Calendar className="h-4 w-4 text-muted-foreground" />
+                <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
                 <div className="flex-1">
                   <Label className="text-xs text-muted-foreground">
                     Member Since
                   </Label>
                   <p className="text-sm font-medium">
-                    {new Date(user.joinDate).toLocaleDateString()}
+                    {new Date(user.created_at).toLocaleDateString()}
                   </p>
                 </div>
               </div>
@@ -114,59 +156,187 @@ export default function AccountPage() {
             <CardDescription>Update your account information</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue={user.name} />
-            </div>
+            <Form {...form}>
+              <form
+                onSubmit={form.handleSubmit((data) => {
+                  if (!user) return;
+                  updateUserMutation.mutate({
+                    userId: user.id,
+                    userData: {
+                      name: data.name,
+                      email: data.email,
+                      currentPassword: data.currentPassword,
+                      newPassword: data.newPassword || undefined,
+                      confirmPassword: data.confirmPassword || undefined,
+                    },
+                  });
+                })}
+                className="space-y-4"
+              >
+                <FormField
+                  control={form.control}
+                  name="name"
+                  rules={{
+                    required: "Name is required",
+                    minLength: {
+                      value: 2,
+                      message: "Name must be at least 2 characters",
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Full Name</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="Your full name"
+                          disabled={updateUserMutation.isPending}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue={user.email} />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="email"
+                  rules={{
+                    required: "Email is required",
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: "Please enter a valid email address",
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="your@email.com"
+                          disabled={updateUserMutation.isPending}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input id="phone" type="tel" defaultValue={user.phone} />
-            </div>
+                <Separator />
 
-            <div className="space-y-2">
-              <Label htmlFor="address">Address</Label>
-              <Input id="address" defaultValue={user.address} />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="currentPassword"
+                  rules={{
+                    required: "Current password is required to save changes",
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Current Password</FormLabel>
+                      <FormControl>
+                        <PasswordInput
+                          placeholder="Enter current password to confirm changes"
+                          disabled={updateUserMutation.isPending}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <Separator />
+                <FormField
+                  control={form.control}
+                  name="newPassword"
+                  rules={{
+                    validate: (value, formValues) => {
+                      if (value && value.length < 6) {
+                        return "Password must be at least 6 characters";
+                      }
+                      return true;
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>New Password</FormLabel>
+                      <FormControl>
+                        <PasswordInput
+                          placeholder="Enter new password (leave blank to keep current)"
+                          disabled={updateUserMutation.isPending}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-2">
-              <Label htmlFor="current-password">Current Password</Label>
-              <Input
-                id="current-password"
-                type="password"
-                placeholder="Enter current password"
-              />
-            </div>
+                <FormField
+                  control={form.control}
+                  name="confirmPassword"
+                  rules={{
+                    validate: (value, formValues) => {
+                      if (value && value.length < 6) {
+                        return "Password must be at least 6 characters";
+                      }
+                      return true;
+                    },
+                  }}
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Confirm New Password</FormLabel>
+                      <FormControl>
+                        <PasswordInput
+                          placeholder="Confirm new password"
+                          disabled={updateUserMutation.isPending}
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
-            <div className="space-y-2">
-              <Label htmlFor="new-password">New Password</Label>
-              <Input
-                id="new-password"
-                type="password"
-                placeholder="Enter new password"
-              />
-            </div>
-
-            <div className="space-y-2">
-              <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input
-                id="confirm-password"
-                type="password"
-                placeholder="Confirm new password"
-              />
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button className="flex-1">Save Changes</Button>
-              <Button variant="outline">Cancel</Button>
-            </div>
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    type="submit"
+                    className="flex-1"
+                    disabled={
+                      updateUserMutation.isPending ||
+                      !form.formState.isDirty
+                    }
+                  >
+                    {updateUserMutation.isPending ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      "Save Changes"
+                    )}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() =>
+                      user &&
+                      form.reset({
+                        name: user.name,
+                        email: user.email,
+                        currentPassword: "",
+                        newPassword: "",
+                        confirmPassword: "",
+                      })
+                    }
+                    disabled={updateUserMutation.isPending}
+                  >
+                    Cancel
+                  </Button>
+                </div>
+              </form>
+            </Form>
           </CardContent>
         </Card>
       </div>

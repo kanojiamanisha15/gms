@@ -20,6 +20,7 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
+  Loader2,
   Plus,
   Search,
 } from "lucide-react";
@@ -64,6 +65,19 @@ export interface DataTableProps<TData, TValue> {
   headerTitle?: string;
   headerDescription?: string;
   headerAction?: React.ReactNode;
+  serverSideSearch?: boolean;
+  searchValue?: string;
+  onSearchChange?: (value: string) => void;
+  isLoading?: boolean;
+  isError?: boolean;
+  error?: Error | string | null;
+  serverSidePagination?: boolean;
+  page?: number;
+  limit?: number;
+  total?: number;
+  totalPages?: number;
+  onPageChange?: (page: number) => void;
+  onLimitChange?: (limit: number) => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -80,6 +94,19 @@ export function DataTable<TData, TValue>({
   headerTitle,
   headerDescription,
   headerAction,
+  serverSideSearch = false,
+  searchValue,
+  onSearchChange,
+  isLoading = false,
+  isError = false,
+  error,
+  serverSidePagination = false,
+  page,
+  limit,
+  total,
+  totalPages,
+  onPageChange,
+  onLimitChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -105,7 +132,7 @@ export function DataTable<TData, TValue>({
       sorting,
       columnFilters,
       columnVisibility,
-      globalFilter,
+      globalFilter: serverSideSearch ? "" : globalFilter,
     },
     initialState: {
       pagination: {
@@ -147,8 +174,12 @@ export function DataTable<TData, TValue>({
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={searchPlaceholder}
-                  value={globalFilter ?? ""}
-                  onChange={(event) => setGlobalFilter(event.target.value)}
+                  value={serverSideSearch ? (searchValue ?? "") : (globalFilter ?? "")}
+                  onChange={(event) =>
+                    serverSideSearch && onSearchChange
+                      ? onSearchChange(event.target.value)
+                      : setGlobalFilter(event.target.value)
+                  }
                   className="pl-9"
                 />
               </div>
@@ -211,7 +242,37 @@ export function DataTable<TData, TValue>({
                   ))}
                 </TableHeader>
                 <TableBody>
-                  {table.getRowModel().rows?.length ? (
+                  {isError ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        <div className="flex flex-col items-center justify-center gap-2 text-destructive">
+                          <span className="font-medium">Failed to load data</span>
+                          <span className="text-sm text-muted-foreground">
+                            {error instanceof Error
+                              ? error.message
+                              : typeof error === "string"
+                                ? error
+                                : "An error occurred"}
+                          </span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : isLoading ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        <div className="flex items-center justify-center gap-2 text-muted-foreground">
+                          <Loader2 className="h-6 w-6 animate-spin" />
+                          <span>Loading...</span>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ) : table.getRowModel().rows?.length ? (
                     table.getRowModel().rows.map((row) => (
                       <TableRow
                         key={row.id}
@@ -245,30 +306,37 @@ export function DataTable<TData, TValue>({
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <p className="text-sm text-muted-foreground">
-                  Showing{" "}
-                  {table.getFilteredRowModel().rows.length === 0
-                    ? 0
-                    : table.getState().pagination.pageIndex *
-                        table.getState().pagination.pageSize +
-                      1}{" "}
-                  to{" "}
-                  {table.getFilteredRowModel().rows.length === 0
-                    ? 0
-                    : Math.min(
-                        (table.getState().pagination.pageIndex + 1) *
-                          table.getState().pagination.pageSize,
-                        table.getFilteredRowModel().rows.length
-                      )}{" "}
-                  of {table.getFilteredRowModel().rows.length} {entityName}(s)
+                  {serverSidePagination && total !== undefined
+                    ? `Showing ${total === 0 ? 0 : (page ?? 1) * (limit ?? 10) - (limit ?? 10) + 1} to ${Math.min((page ?? 1) * (limit ?? 10), total)} of ${total} ${entityName}(s)`
+                    : `Showing ${
+                        table.getFilteredRowModel().rows.length === 0
+                          ? 0
+                          : table.getState().pagination.pageIndex *
+                              table.getState().pagination.pageSize +
+                            1
+                      } to ${
+                        table.getFilteredRowModel().rows.length === 0
+                          ? 0
+                          : Math.min(
+                              (table.getState().pagination.pageIndex + 1) *
+                                table.getState().pagination.pageSize,
+                              table.getFilteredRowModel().rows.length
+                            )
+                      } of ${table.getFilteredRowModel().rows.length} ${entityName}(s)`}
                 </p>
               </div>
               <div className="flex items-center gap-6">
                 <div className="flex items-center gap-2">
                   <p className="text-sm font-medium">Rows per page</p>
                   <Select
-                    value={`${table.getState().pagination.pageSize}`}
+                    value={`${serverSidePagination ? limit ?? defaultPageSize : table.getState().pagination.pageSize}`}
                     onValueChange={(value) => {
-                      table.setPageSize(Number(value));
+                      const numValue = Number(value);
+                      if (serverSidePagination && onLimitChange) {
+                        onLimitChange(numValue);
+                      } else {
+                        table.setPageSize(numValue);
+                      }
                     }}
                   >
                     <SelectTrigger className="h-8 w-[70px]">
@@ -286,17 +354,32 @@ export function DataTable<TData, TValue>({
                 <div className="flex items-center gap-2">
                   <div className="flex items-center justify-center text-sm font-medium">
                     Page{" "}
-                    {table.getFilteredRowModel().rows.length === 0
-                      ? 0
-                      : table.getState().pagination.pageIndex + 1}{" "}
-                    of {table.getPageCount()}
+                    {serverSidePagination
+                      ? page ?? 1
+                      : table.getFilteredRowModel().rows.length === 0
+                        ? 0
+                        : table.getState().pagination.pageIndex + 1}{" "}
+                    of{" "}
+                    {serverSidePagination
+                      ? totalPages ?? 1
+                      : table.getPageCount()}
                   </div>
                   <div className="flex items-center gap-1">
                     <Button
                       variant="outline"
                       className="h-8 w-8 p-0"
-                      onClick={() => table.setPageIndex(0)}
-                      disabled={!table.getCanPreviousPage()}
+                      onClick={() => {
+                        if (serverSidePagination && onPageChange) {
+                          onPageChange(1);
+                        } else {
+                          table.setPageIndex(0);
+                        }
+                      }}
+                      disabled={
+                        serverSidePagination
+                          ? (page ?? 1) <= 1
+                          : !table.getCanPreviousPage()
+                      }
                     >
                       <span className="sr-only">Go to first page</span>
                       <ChevronsLeft className="h-4 w-4" />
@@ -304,8 +387,18 @@ export function DataTable<TData, TValue>({
                     <Button
                       variant="outline"
                       className="h-8 w-8 p-0"
-                      onClick={() => table.previousPage()}
-                      disabled={!table.getCanPreviousPage()}
+                      onClick={() => {
+                        if (serverSidePagination && onPageChange && page) {
+                          onPageChange(page - 1);
+                        } else {
+                          table.previousPage();
+                        }
+                      }}
+                      disabled={
+                        serverSidePagination
+                          ? (page ?? 1) <= 1
+                          : !table.getCanPreviousPage()
+                      }
                     >
                       <span className="sr-only">Go to previous page</span>
                       <ChevronLeft className="h-4 w-4" />
@@ -313,8 +406,18 @@ export function DataTable<TData, TValue>({
                     <Button
                       variant="outline"
                       className="h-8 w-8 p-0"
-                      onClick={() => table.nextPage()}
-                      disabled={!table.getCanNextPage()}
+                      onClick={() => {
+                        if (serverSidePagination && onPageChange && page) {
+                          onPageChange(page + 1);
+                        } else {
+                          table.nextPage();
+                        }
+                      }}
+                      disabled={
+                        serverSidePagination
+                          ? (page ?? 1) >= (totalPages ?? 1)
+                          : !table.getCanNextPage()
+                      }
                     >
                       <span className="sr-only">Go to next page</span>
                       <ChevronRight className="h-4 w-4" />
@@ -322,10 +425,18 @@ export function DataTable<TData, TValue>({
                     <Button
                       variant="outline"
                       className="h-8 w-8 p-0"
-                      onClick={() =>
-                        table.setPageIndex(table.getPageCount() - 1)
+                      onClick={() => {
+                        if (serverSidePagination && onPageChange && totalPages) {
+                          onPageChange(totalPages);
+                        } else {
+                          table.setPageIndex(table.getPageCount() - 1);
+                        }
+                      }}
+                      disabled={
+                        serverSidePagination
+                          ? (page ?? 1) >= (totalPages ?? 1)
+                          : !table.getCanNextPage()
                       }
-                      disabled={!table.getCanNextPage()}
                     >
                       <span className="sr-only">Go to last page</span>
                       <ChevronsRight className="h-4 w-4" />

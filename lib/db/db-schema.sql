@@ -84,8 +84,8 @@ CREATE TABLE IF NOT EXISTS attendance (
 CREATE TABLE IF NOT EXISTS trainers (
   id SERIAL PRIMARY KEY,
   name VARCHAR(255) NOT NULL,
-  email VARCHAR(255) NOT NULL,
-  phone VARCHAR(20),
+  email VARCHAR(255),
+  phone VARCHAR(20) NOT NULL,
   role VARCHAR(50) NOT NULL CHECK (role IN ('Trainer', 'Staff')),
   hire_date DATE NOT NULL,
   status VARCHAR(50) DEFAULT 'active' CHECK (status IN ('active', 'inactive')),
@@ -102,21 +102,3 @@ CREATE TABLE IF NOT EXISTS notifications (
   read BOOLEAN DEFAULT FALSE,
   created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
-
--- Create indexes for better query performance
-CREATE INDEX IF NOT EXISTS idx_members_member_id ON members(member_id);
-CREATE INDEX IF NOT EXISTS idx_members_status ON members(status);
-CREATE INDEX IF NOT EXISTS idx_payments_member_id ON payments(member_id);
-CREATE INDEX IF NOT EXISTS idx_payments_payment_date ON payments(payment_date);
-CREATE INDEX IF NOT EXISTS idx_expenses_category ON expenses(category);
-CREATE INDEX IF NOT EXISTS idx_expenses_date ON expenses(date);
-CREATE INDEX IF NOT EXISTS idx_expenses_status ON expenses(status);
-CREATE INDEX IF NOT EXISTS idx_attendance_member_id ON attendance(member_id);
-CREATE INDEX IF NOT EXISTS idx_attendance_check_in_date ON attendance(check_in_date);
-CREATE INDEX IF NOT EXISTS idx_attendance_status ON attendance(status);
-CREATE INDEX IF NOT EXISTS idx_trainers_email ON trainers(email);
-CREATE INDEX IF NOT EXISTS idx_trainers_role ON trainers(role);
-CREATE INDEX IF NOT EXISTS idx_trainers_status ON trainers(status);
-CREATE INDEX IF NOT EXISTS idx_notifications_type ON notifications(type);
-CREATE INDEX IF NOT EXISTS idx_notifications_read ON notifications(read);
-CREATE INDEX IF NOT EXISTS idx_notifications_created_at ON notifications(created_at);

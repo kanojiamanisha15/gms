@@ -1,6 +1,7 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from "recharts";
+import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -14,22 +15,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
-
-// Mock data for the last 12 months
-const chartData = [
-  { month: "Jan", revenue: 12500, expenses: 8500, profit: 4000 },
-  { month: "Feb", revenue: 18200, expenses: 11200, profit: 7000 },
-  { month: "Mar", revenue: 15200, expenses: 9800, profit: 5400 },
-  { month: "Apr", revenue: 21000, expenses: 13500, profit: 7500 },
-  { month: "May", revenue: 19800, expenses: 12800, profit: 7000 },
-  { month: "Jun", revenue: 22500, expenses: 14200, profit: 8300 },
-  { month: "Jul", revenue: 24500, expenses: 15800, profit: 8700 },
-  { month: "Aug", revenue: 23200, expenses: 15100, profit: 8100 },
-  { month: "Sep", revenue: 21800, expenses: 14100, profit: 7700 },
-  { month: "Oct", revenue: 26700, expenses: 17200, profit: 9500 },
-  { month: "Nov", revenue: 25100, expenses: 16200, profit: 8900 },
-  { month: "Dec", revenue: 28900, expenses: 18600, profit: 10300 },
-];
+import { useFinancialChart } from "@/hooks/use-dashboard";
 
 const chartConfig = {
   revenue: {
@@ -46,7 +32,11 @@ const chartConfig = {
   },
 } satisfies ChartConfig;
 
+const defaultChartData: { month: string; revenue: number; expenses: number; profit: number }[] = [];
+
 export function FinancialChart() {
+  const { data: chartData = defaultChartData, isLoading, isError, error } = useFinancialChart();
+
   return (
     <Card>
       <CardHeader>
@@ -56,6 +46,15 @@ export function FinancialChart() {
         </CardDescription>
       </CardHeader>
       <CardContent>
+        {isError ? (
+          <p className="text-sm text-destructive mb-4">
+            {error instanceof Error ? error.message : "Failed to load chart data"}
+          </p>
+        ) : isLoading ? (
+          <div className="h-[350px] w-full flex items-center justify-center bg-muted/50 rounded-lg">
+            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
+          </div>
+        ) : (
         <ChartContainer config={chartConfig} className="h-[350px] w-full">
           <BarChart
             data={chartData}
@@ -112,6 +111,7 @@ export function FinancialChart() {
             />
           </BarChart>
         </ChartContainer>
+        )}
       </CardContent>
     </Card>
   );

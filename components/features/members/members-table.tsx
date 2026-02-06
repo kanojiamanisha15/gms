@@ -5,222 +5,67 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { EditButton } from "@/components/ui/edit-button";
 import { DeleteButton } from "@/components/ui/delete-button";
-import { mockPlans } from "../membership-plans/membership-plans-table";
+import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
+import { doGetMembers, doDeleteMember } from "@/lib/services/members";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useAppSelector, useMembersTableActions } from "@/lib/store";
+import { toast } from "sonner";
+import { calculateExpirationDate } from "@/lib/helpers";
+import type { IMemberData } from "@/types";
 
-// Helper function to calculate expiration date based on join date and membership duration
-function calculateExpirationDate(
-  joinDate: string,
-  membershipType: string
-): string {
-  const join = new Date(joinDate);
-  const plan = mockPlans.find((p) => p.name === membershipType);
+function ActionsCell({ member }: { member: IMemberData }) {
+  const queryClient = useQueryClient();
 
-  if (!plan) {
-    // Default to 1 month if plan not found
-    join.setMonth(join.getMonth() + 1);
-    return join.toISOString().split("T")[0];
-  }
+  const deleteMutation = useMutation({
+    mutationFn: (memberId: string) => doDeleteMember(memberId),
+    onSuccess: (response) => {
+      if (response.success) {
+        toast.success("Member deleted successfully");
+        queryClient.invalidateQueries({ queryKey: ["members"] });
+        queryClient.invalidateQueries({ queryKey: ["payments"] });
+        queryClient.invalidateQueries({ queryKey: ["dashboard"] });
+        queryClient.invalidateQueries({ queryKey: ["notifications"] });
+      } else {
+        toast.error(response.error || "Failed to delete member");
+      }
+    },
+    onError: (error) => {
+      console.error("Error deleting member:", error);
+      toast.error("Failed to delete member. Please try again.");
+    },
+  });
 
-  const duration = plan.duration;
-  if (duration.includes("year")) {
-    join.setFullYear(join.getFullYear() + 1);
-  } else if (duration.includes("month")) {
-    const months = parseInt(duration.split(" ")[0]) || 1;
-    join.setMonth(join.getMonth() + months);
-  }
-
-  return join.toISOString().split("T")[0];
-}
-
-function ActionsCell({ member }: { member: Member }) {
-  const handleDelete = (id: string) => {
-    // Handle delete action
-    console.log("Delete member:", id);
+  const handleDelete = async (id: string): Promise<void> => {
+    try {
+      await deleteMutation.mutateAsync(id);
+    } catch (error) {
+    }
   };
 
   return (
     <div className="flex items-center gap-2">
       <EditButton
-        id={member.id}
+        id={member.memberId}
         editPath="/members/add-member"
         entityName="member"
       />
       <DeleteButton
-        id={member.id}
+        id={member.memberId}
         onDelete={handleDelete}
         entityName="member"
         itemName={member.name}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
 }
 
-export type Member = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  membershipType: string;
-  joinDate: string;
-  expiryDate: string;
-  status: "active" | "inactive" | "expired";
-  paymentStatus: "paid" | "unpaid";
-  paymentAmount: number;
-};
-
-export const mockMembers: Member[] = [
+const columns: ColumnDef<IMemberData>[] = [
   {
-    id: "5JA01", // 5JA01 - First member in Jan 2025
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1 234-567-8900",
-    membershipType: "Premium",
-    joinDate: "2025-01-15",
-    expiryDate: calculateExpirationDate("2025-01-15", "Premium"), // Expires Jan 2026
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 299.99,
-  },
-  {
-    id: "5DE01", // 5DE01 - First member in Dec 2025
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+1 234-567-8901",
-    membershipType: "Basic",
-    joinDate: "2025-12-20",
-    expiryDate: calculateExpirationDate("2025-12-20", "Basic"), // Expires Jan 2026
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 29.99,
-  },
-  {
-    id: "3DE01", // 3DE01 - First member in Dec 2023
-    name: "Bob Johnson",
-    email: "bob.johnson@example.com",
-    phone: "+1 234-567-8902",
-    membershipType: "Premium",
-    joinDate: "2023-12-10",
-    expiryDate: calculateExpirationDate("2023-12-10", "Premium"),
-    status: "expired",
-    paymentStatus: "unpaid",
-    paymentAmount: 299.99,
-  },
-  {
-    id: "5OC01", // 5OC01 - First member in Oct 2025
-    name: "Alice Williams",
-    email: "alice.williams@example.com",
-    phone: "+1 234-567-8903",
-    membershipType: "Standard",
-    joinDate: "2025-10-05",
-    expiryDate: calculateExpirationDate("2025-10-05", "Standard"), // Expires Jan 2026 (3 months)
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 79.99,
-  },
-  {
-    id: "4JA01", // 4JA01 - First member in Jan 2024
-    name: "Charlie Brown",
-    email: "charlie.brown@example.com",
-    phone: "+1 234-567-8904",
-    membershipType: "Basic",
-    joinDate: "2024-01-28",
-    expiryDate: calculateExpirationDate("2024-01-28", "Basic"),
-    status: "inactive",
-    paymentStatus: "unpaid",
-    paymentAmount: 29.99,
-  },
-  {
-    id: "5JA02", // 5JA02 - Second member in Jan 2025
-    name: "Diana Prince",
-    email: "diana.prince@example.com",
-    phone: "+1 234-567-8905",
-    membershipType: "Premium",
-    joinDate: "2025-01-10",
-    expiryDate: calculateExpirationDate("2025-01-10", "Premium"), // Expires Jan 2026
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 299.99,
-  },
-  {
-    id: "3NO01", // 3NO01 - First member in Nov 2023
-    name: "Edward Norton",
-    email: "edward.norton@example.com",
-    phone: "+1 234-567-8906",
-    membershipType: "Standard",
-    joinDate: "2023-11-30",
-    expiryDate: calculateExpirationDate("2023-11-30", "Standard"),
-    status: "expired",
-    paymentStatus: "unpaid",
-    paymentAmount: 79.99,
-  },
-  {
-    id: "5DE02", // 5DE02 - Second member in Dec 2025
-    name: "Fiona Green",
-    email: "fiona.green@example.com",
-    phone: "+1 234-567-8907",
-    membershipType: "Basic",
-    joinDate: "2025-12-25",
-    expiryDate: calculateExpirationDate("2025-12-25", "Basic"), // Expires Jan 2026
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 29.99,
-  },
-  {
-    id: "4JA02", // 4JA02 - Second member in Jan 2024
-    name: "George White",
-    email: "george.white@example.com",
-    phone: "+1 234-567-8908",
-    membershipType: "Premium",
-    joinDate: "2024-01-10",
-    expiryDate: calculateExpirationDate("2024-01-10", "Premium"),
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 299.99,
-  },
-  {
-    id: "4FE01", // 4FE01 - First member in Feb 2024
-    name: "Hannah Black",
-    email: "hannah.black@example.com",
-    phone: "+1 234-567-8909",
-    membershipType: "Standard",
-    joinDate: "2024-02-28",
-    expiryDate: calculateExpirationDate("2024-02-28", "Standard"),
-    status: "inactive",
-    paymentStatus: "unpaid",
-    paymentAmount: 79.99,
-  },
-  {
-    id: "3OC01", // 3OC01 - First member in Oct 2023
-    name: "Ian Gray",
-    email: "ian.gray@example.com",
-    phone: "+1 234-567-8910",
-    membershipType: "Basic",
-    joinDate: "2023-10-15",
-    expiryDate: calculateExpirationDate("2023-10-15", "Basic"),
-    status: "expired",
-    paymentStatus: "unpaid",
-    paymentAmount: 29.99,
-  },
-  {
-    id: "5OC02", // 5OC02 - Second member in Oct 2025
-    name: "Julia Red",
-    email: "julia.red@example.com",
-    phone: "+1 234-567-8911",
-    membershipType: "Standard",
-    joinDate: "2025-10-15",
-    expiryDate: calculateExpirationDate("2025-10-15", "Standard"), // Expires Jan 2026 (3 months)
-    status: "active",
-    paymentStatus: "paid",
-    paymentAmount: 79.99,
-  },
-];
-
-const columns: ColumnDef<Member>[] = [
-  {
-    accessorKey: "id",
+    accessorKey: "memberId",
     header: "Member ID",
     cell: ({ row }) => (
-      <div className="font-mono font-medium">{row.getValue("id")}</div>
+      <div className="font-mono font-medium">{row.getValue("memberId")}</div>
     ),
   },
   {
@@ -360,14 +205,44 @@ const columns: ColumnDef<Member>[] = [
 ];
 
 export function MembersTable() {
+  const { setSearchInput, setPage, setLimit } = useMembersTableActions();
+  const searchInput = useAppSelector((s) => s.membersTable.searchInput);
+  const page = useAppSelector((s) => s.membersTable.page);
+  const limit = useAppSelector((s) => s.membersTable.limit);
+  const debouncedSearch = useDebounce(searchInput, 300);
+
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["members", debouncedSearch, page, limit],
+    queryFn: () =>
+      doGetMembers({
+        search: debouncedSearch || undefined,
+        page,
+        limit,
+      }),
+  });
+  const members: IMemberData[] = data?.members ?? [];
+
   return (
     <DataTable
       columns={columns}
-      data={mockMembers}
-      searchPlaceholder="Search members..."
+      data={members}
+      searchPlaceholder="Search by name, email, or member ID..."
       addButtonLabel="Add Member"
       addButtonHref="/members/add-member"
       entityName="member"
+      serverSideSearch
+      searchValue={searchInput}
+      onSearchChange={setSearchInput}
+      isLoading={isLoading}
+      isError={isError}
+      error={error}
+      serverSidePagination
+      page={page}
+      limit={limit}
+      total={data?.total}
+      totalPages={data?.totalPages}
+      onPageChange={setPage}
+      onLimitChange={setLimit}
     />
   );
 }

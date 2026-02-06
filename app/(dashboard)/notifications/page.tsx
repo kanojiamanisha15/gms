@@ -3,6 +3,12 @@
 import * as React from "react";
 import { PageContent } from "@/components/ui/page-content";
 import {
+  useNotifications,
+  useMarkNotificationRead,
+  useMarkAllNotificationsRead,
+  useDeleteNotification,
+} from "@/hooks/use-notifications";
+import {
   Card,
   CardContent,
   CardDescription,
@@ -132,23 +138,23 @@ const getNotificationBadgeVariant = (
 };
 
 export default function NotificationsPage() {
-  const [notifications, setNotifications] =
-    React.useState<Notification[]>(mockNotifications);
+  const { data: notifications = [], isLoading, isError, error } = useNotifications();
+  const markReadMutation = useMarkNotificationRead();
+  const markAllReadMutation = useMarkAllNotificationsRead();
+  const deleteMutation = useDeleteNotification();
 
   const unreadCount = notifications.filter((n) => !n.read).length;
 
   const markAsRead = (id: string) => {
-    setNotifications((prev) =>
-      prev.map((n) => (n.id === id ? { ...n, read: true } : n))
-    );
+    markReadMutation.mutate(id);
   };
 
   const markAllAsRead = () => {
-    setNotifications((prev) => prev.map((n) => ({ ...n, read: true })));
+    markAllReadMutation.mutate();
   };
 
   const deleteNotification = (id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    deleteMutation.mutate(id);
   };
 
   const unreadNotifications = notifications.filter((n) => !n.read);
@@ -160,7 +166,11 @@ export default function NotificationsPage() {
       description="Stay updated with important alerts and updates"
       headerAction={
         unreadCount > 0 ? (
-          <Button variant="outline" onClick={markAllAsRead}>
+          <Button
+            variant="outline"
+            onClick={() => markAllAsRead()}
+            disabled={markAllReadMutation.isPending}
+          >
             <Check className="h-4 w-4 mr-2" />
             Mark all as read
           </Button>
@@ -168,139 +178,149 @@ export default function NotificationsPage() {
       }
     >
       <div className="px-4 lg:px-6 space-y-6">
-        {unreadCount > 0 && (
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <Bell className="h-5 w-5" />
-                  <CardTitle>Unread Notifications</CardTitle>
-                  <Badge variant="destructive">{unreadCount}</Badge>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {unreadNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="flex items-start gap-4 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
-                  >
-                    <div className="mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-semibold text-sm">
-                            {notification.title}
-                          </h4>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {notification.message}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={getNotificationBadgeVariant(
-                            notification.type
-                          )}
-                          className="shrink-0"
-                        >
-                          {notification.type}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-muted-foreground">
-                          {dayjs(notification.createdAt).fromNow()}
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markAsRead(notification.id)}
-                          >
-                            <Check className="h-4 w-4 mr-1" />
-                            Mark as read
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteNotification(notification.id)}
-                          >
-                            <X className="h-4 w-4" />
-                          </Button>
-                        </div>
-                      </div>
+        {isLoading ? (
+          <p className="text-sm text-muted-foreground">Loading notifications...</p>
+        ) : isError ? (
+          <p className="text-sm text-destructive">
+            {error instanceof Error ? error.message : "Failed to load notifications"}
+          </p>
+        ) :
+          unreadCount > 0 ? (
+            <>
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Bell className="h-5 w-5" />
+                      <CardTitle>Unread Notifications</CardTitle>
+                      <Badge variant="destructive">{unreadCount}</Badge>
                     </div>
                   </div>
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-3">
+                    {unreadNotifications.map((notification) => (
+                      <div
+                        key={notification.id}
+                        className="flex items-start gap-4 p-4 rounded-lg border bg-muted/50 hover:bg-muted transition-colors"
+                      >
+                        <div className="mt-0.5">
+                          {getNotificationIcon(notification.type)}
+                        </div>
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div>
+                              <h4 className="font-semibold text-sm">
+                                {notification.title}
+                              </h4>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {notification.message}
+                              </p>
+                            </div>
+                            <Badge
+                              variant={getNotificationBadgeVariant(
+                                notification.type
+                              )}
+                              className="shrink-0"
+                            >
+                              {notification.type}
+                            </Badge>
+                          </div>
+                          <div className="flex items-center justify-between mt-2">
+                            <span className="text-xs text-muted-foreground">
+                              {dayjs(notification.createdAt).fromNow()}
+                            </span>
+                            <div className="flex items-center gap-2">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => markAsRead(notification.id)}
+                              >
+                                <Check className="h-4 w-4 mr-1" />
+                                Mark as read
+                              </Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteNotification(notification.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>
+                    {unreadCount > 0 ? "Read Notifications" : "All Notifications"}
+                  </CardTitle>
+                  <CardDescription>
+                    {readNotifications.length} notification
+                    {readNotifications.length !== 1 ? "s" : ""} read
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  {readNotifications.length > 0 ? (
+                    <div className="space-y-3">
+                      {readNotifications.map((notification) => (
+                        <div
+                          key={notification.id}
+                          className="flex items-start gap-4 p-4 rounded-lg border opacity-75 hover:opacity-100 transition-opacity"
+                        >
+                          <div className="mt-0.5">
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <div className="flex-1 space-y-1">
+                            <div className="flex items-start justify-between gap-2">
+                              <div>
+                                <h4 className="font-semibold text-sm">
+                                  {notification.title}
+                                </h4>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {notification.message}
+                                </p>
+                              </div>
+                              <Badge
+                                variant={getNotificationBadgeVariant(
+                                  notification.type
+                                )}
+                                className="shrink-0"
+                              >
+                                {notification.type}
+                              </Badge>
+                            </div>
+                            <div className="flex items-center justify-between mt-2">
+                              <span className="text-xs text-muted-foreground">
+                                {dayjs(notification.createdAt).fromNow()}
+                              </span>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => deleteNotification(notification.id)}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No read notifications
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </>
+          ) : null}
 
-        <Card>
-          <CardHeader>
-            <CardTitle>
-              {unreadCount > 0 ? "Read Notifications" : "All Notifications"}
-            </CardTitle>
-            <CardDescription>
-              {readNotifications.length} notification
-              {readNotifications.length !== 1 ? "s" : ""} read
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {readNotifications.length > 0 ? (
-              <div className="space-y-3">
-                {readNotifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className="flex items-start gap-4 p-4 rounded-lg border opacity-75 hover:opacity-100 transition-opacity"
-                  >
-                    <div className="mt-0.5">
-                      {getNotificationIcon(notification.type)}
-                    </div>
-                    <div className="flex-1 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <h4 className="font-semibold text-sm">
-                            {notification.title}
-                          </h4>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            {notification.message}
-                          </p>
-                        </div>
-                        <Badge
-                          variant={getNotificationBadgeVariant(
-                            notification.type
-                          )}
-                          className="shrink-0"
-                        >
-                          {notification.type}
-                        </Badge>
-                      </div>
-                      <div className="flex items-center justify-between mt-2">
-                        <span className="text-xs text-muted-foreground">
-                          {dayjs(notification.createdAt).fromNow()}
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => deleteNotification(notification.id)}
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                No read notifications
-              </div>
-            )}
-          </CardContent>
-        </Card>
+
       </div>
     </PageContent>
   );

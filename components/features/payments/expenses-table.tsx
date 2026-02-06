@@ -11,22 +11,45 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Pencil } from "lucide-react";
 import dayjs from "dayjs";
+import { useQuery } from "@tanstack/react-query";
+import { doGetExpenses } from "@/lib/services/expenses";
+import { useCreateExpense, useUpdateExpense, useDeleteExpense } from "@/hooks/use-expenses";
+import { useDebounce } from "@/hooks/use-debounce";
+import { useAppSelector, useExpensesTableActions } from "@/lib/store";
+import type { IExpenseData } from "@/types";
 
 // Lazy load the expense form modal (only loads when opened)
 const ExpenseFormModal = dynamic(() => import("./expense-form-modal").then(mod => ({ default: mod.ExpenseFormModal })), {
   ssr: false,
 });
 
+const categoryLabels: Record<string, string> = {
+  equipment: "Equipment",
+  utilities: "Utilities",
+  rent: "Rent",
+  supplies: "Supplies",
+  staff: "Staff",
+  marketing: "Marketing",
+  insurance: "Insurance",
+  maintenance: "Maintenance",
+  software: "Software",
+  other: "Other",
+};
+
 function ActionsCell({
   expense,
   onEdit,
 }: {
-  expense: Expense;
-  onEdit: (expense: Expense) => void;
+  expense: IExpenseData;
+  onEdit: (expense: IExpenseData) => void;
 }) {
-  const handleDelete = (id: string) => {
-    // Handle delete action
-    console.log("Delete expense:", id);
+  const deleteMutation = useDeleteExpense();
+
+  const handleDelete = async (id: string): Promise<void> => {
+    try {
+      await deleteMutation.mutateAsync(parseInt(id, 10));
+    } catch {
+    }
   };
 
   return (
@@ -41,211 +64,119 @@ function ActionsCell({
         <span className="sr-only">Edit expense</span>
       </Button>
       <DeleteButton
-        id={expense.id}
+        id={String(expense.id)}
         onDelete={handleDelete}
         entityName="expense"
-        itemName={expense.description}
+        itemName={expense.description ?? expense.category}
+        isLoading={deleteMutation.isPending}
       />
     </div>
   );
 }
 
-export type Expense = {
-  id: string;
-  category: string;
-  description: string;
-  amount: number;
-  date: string;
-  status: "paid" | "pending" | "overdue";
-  vendor?: string;
-};
-
-const mockExpenses: Expense[] = [
-  {
-    id: "1",
-    category: "Equipment",
-    description: "Treadmill maintenance and repair",
-    amount: 1250.0,
-    date: "2026-01-15",
-    status: "paid",
-    vendor: "Fitness Equipment Co.",
-  },
-  {
-    id: "2",
-    category: "Utilities",
-    description: "Monthly electricity bill",
-    amount: 850.5,
-    date: "2026-01-20",
-    status: "paid",
-    vendor: "City Power",
-  },
-  {
-    id: "3",
-    category: "Rent",
-    description: "Monthly facility rent",
-    amount: 5000.0,
-    date: "2026-01-01",
-    status: "paid",
-    vendor: "Property Management",
-  },
-  {
-    id: "4",
-    category: "Supplies",
-    description: "Cleaning supplies and sanitizers",
-    amount: 320.75,
-    date: "2026-01-10",
-    status: "paid",
-    vendor: "Supply Depot",
-  },
-  {
-    id: "5",
-    category: "Staff",
-    description: "Trainer salaries - January",
-    amount: 8500.0,
-    date: "2026-01-15",
-    status: "paid",
-    vendor: "Payroll",
-  },
-  {
-    id: "6",
-    category: "Marketing",
-    description: "Social media advertising campaign",
-    amount: 1200.0,
-    date: "2026-01-25",
-    status: "pending",
-    vendor: "Digital Marketing Agency",
-  },
-  {
-    id: "7",
-    category: "Equipment",
-    description: "New weightlifting equipment",
-    amount: 3500.0,
-    date: "2026-01-05",
-    status: "pending",
-    vendor: "Fitness Equipment Co.",
-  },
-  {
-    id: "8",
-    category: "Utilities",
-    description: "Monthly water and sewer bill",
-    amount: 450.0,
-    date: "2026-01-12",
-    status: "paid",
-    vendor: "City Water",
-  },
-  {
-    id: "9",
-    category: "Insurance",
-    description: "Quarterly liability insurance",
-    amount: 1800.0,
-    date: "2026-01-18",
-    status: "overdue",
-    vendor: "Insurance Corp",
-  },
-  {
-    id: "10",
-    category: "Maintenance",
-    description: "HVAC system service",
-    amount: 650.0,
-    date: "2026-01-28",
-    status: "pending",
-    vendor: "HVAC Services",
-  },
-  {
-    id: "11",
-    category: "Supplies",
-    description: "Towels and locker room supplies",
-    amount: 280.5,
-    date: "2024-04-01",
-    status: "paid",
-    vendor: "Supply Depot",
-  },
-  {
-    id: "12",
-    category: "Software",
-    description: "Gym management software subscription",
-    amount: 299.99,
-    date: "2024-04-05",
-    status: "paid",
-    vendor: "Software Solutions",
-  },
-];
-
 export function ExpensesTable() {
   const [isModalOpen, setIsModalOpen] = React.useState(false);
-  const [selectedExpense, setSelectedExpense] = React.useState<Expense | null>(
-    null
-  );
+  const [selectedExpense, setSelectedExpense] = React.useState<IExpenseData | null>(null);
 
-  // Default dates: First and last day of current month
-  const getCurrentMonthDates = () => {
-    const start = dayjs().startOf("month").format("YYYY-MM-DD");
-    const end = dayjs().endOf("month").format("YYYY-MM-DD");
-    return { start, end };
-  };
+  const {
+    setSearchInput,
+    setPage,
+    setLimit,
+    setStartDate,
+    setEndDate,
+    clearDateRange,
+  } = useExpensesTableActions();
+  const searchInput = useAppSelector((s) => s.expensesTable.searchInput);
+  const page = useAppSelector((s) => s.expensesTable.page);
+  const limit = useAppSelector((s) => s.expensesTable.limit);
+  const startDate = useAppSelector((s) => s.expensesTable.startDate);
+  const endDate = useAppSelector((s) => s.expensesTable.endDate);
+  const debouncedSearch = useDebounce(searchInput, 300);
 
-  const currentMonthDates = getCurrentMonthDates();
-  const [startDate, setStartDate] = React.useState<string>(
-    currentMonthDates.start
-  );
-  const [endDate, setEndDate] = React.useState<string>(currentMonthDates.end);
+  const { data, isLoading, isError, error } = useQuery({
+    queryKey: ["expenses", debouncedSearch, page, limit, startDate, endDate],
+    queryFn: () =>
+      doGetExpenses({
+        search: debouncedSearch || undefined,
+        page,
+        limit,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
+      }),
+  });
+
+  const expenses: IExpenseData[] = data?.expenses ?? [];
+
+  const createMutation = useCreateExpense();
+  const updateMutation = useUpdateExpense();
 
   const handleAdd = () => {
     setSelectedExpense(null);
     setIsModalOpen(true);
   };
 
-  const handleEdit = (expense: Expense) => {
+  const handleEdit = (expense: IExpenseData) => {
     setSelectedExpense(expense);
     setIsModalOpen(true);
   };
 
-  const handleSave = (data: {
+  const handleSave = async (formData: {
     category: string;
-    description: string;
+    description?: string;
     amount: number;
     date: string;
     status: "paid" | "pending" | "overdue";
     vendor?: string;
   }) => {
+    const payload = {
+      category: formData.category,
+      description: formData.description?.trim() || null,
+      amount: formData.amount,
+      date: formData.date,
+      status: formData.status,
+      vendor: formData.vendor?.trim() || null,
+    };
     if (selectedExpense) {
-      // Handle update
-      console.log("Updating expense:", selectedExpense.id, data);
+      await updateMutation.mutateAsync({
+        expenseId: selectedExpense.id,
+        data: payload,
+      });
     } else {
-      // Handle create
-      console.log("Adding expense:", data);
+      await createMutation.mutateAsync(payload);
     }
-    // In a real app, you would update the expenses list here
   };
 
-  const columns: ColumnDef<Expense>[] = [
+  const columns: ColumnDef<IExpenseData>[] = [
     {
       accessorKey: "category",
       header: "Category",
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("category")}</div>
+        <div className="font-medium">
+          {categoryLabels[row.getValue("category") as string] ||
+            String(row.getValue("category"))}
+        </div>
       ),
     },
     {
       accessorKey: "description",
       header: "Description",
       cell: ({ row }) => (
-        <div className="max-w-md">{row.getValue("description")}</div>
+        <div className="max-w-md">{row.getValue("description") ?? "—"}</div>
       ),
     },
     {
       accessorKey: "vendor",
       header: "Vendor",
       cell: ({ row }) => {
-        const vendor = row.getValue("vendor") as string | undefined;
-        return <div className="text-muted-foreground">{vendor || "N/A"}</div>;
+        const vendor = row.getValue("vendor") as string | null | undefined;
+        return <div className="text-muted-foreground">{vendor ?? "N/A"}</div>;
       },
     },
     {
       accessorKey: "amount",
       header: "Amount",
       cell: ({ row }) => {
-        const amount = parseFloat(row.getValue("amount"));
+        const amount = parseFloat(String(row.getValue("amount")));
         return (
           <div className="font-medium">
             Rs.
@@ -281,7 +212,7 @@ export function ExpensesTable() {
         const config = statusConfig[status] || statusConfig.pending;
         return (
           <Badge variant={config.variant}>
-            {status.charAt(0).toUpperCase() + status.slice(1)}
+            {status ? status.charAt(0).toUpperCase() + status.slice(1) : status}
           </Badge>
         );
       },
@@ -296,38 +227,6 @@ export function ExpensesTable() {
       enableSorting: false,
     },
   ];
-
-  // Filter expenses based on date range
-  const filteredExpenses = React.useMemo(() => {
-    if (!startDate && !endDate) {
-      return mockExpenses;
-    }
-
-    return mockExpenses.filter((expense) => {
-      const expenseDate = dayjs(expense.date).startOf("day");
-
-      if (startDate && endDate) {
-        const start = dayjs(startDate).startOf("day");
-        const end = dayjs(endDate).startOf("day");
-        return (
-          (expenseDate.isAfter(start) || expenseDate.isSame(start, "day")) &&
-          (expenseDate.isBefore(end) || expenseDate.isSame(end, "day"))
-        );
-      }
-
-      if (startDate) {
-        const start = dayjs(startDate).startOf("day");
-        return expenseDate.isAfter(start) || expenseDate.isSame(start, "day");
-      }
-
-      if (endDate) {
-        const end = dayjs(endDate).startOf("day");
-        return expenseDate.isBefore(end) || expenseDate.isSame(end, "day");
-      }
-
-      return true;
-    });
-  }, [startDate, endDate]);
 
   const headerAction = (
     <div className="flex items-center gap-3">
@@ -356,14 +255,7 @@ export function ExpensesTable() {
         />
       </div>
       {(startDate || endDate) && (
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setStartDate("");
-            setEndDate("");
-          }}
-        >
+        <Button variant="outline" size="sm" onClick={clearDateRange}>
           Clear
         </Button>
       )}
@@ -374,22 +266,34 @@ export function ExpensesTable() {
     <>
       <DataTable
         columns={columns}
-        data={filteredExpenses}
+        data={expenses}
         searchPlaceholder="Search expenses..."
         addButtonLabel="Add Expense"
         entityName="expense"
         onAddClick={handleAdd}
         headerTitle="Expenses"
-        headerDescription={`${filteredExpenses.length} expense${
-          filteredExpenses.length !== 1 ? "s" : ""
-        } recorded`}
+        headerDescription={`${data?.total ?? 0} expense${(data?.total ?? 0) !== 1 ? "s" : ""} recorded`}
         headerAction={headerAction}
+        serverSideSearch
+        searchValue={searchInput}
+        onSearchChange={setSearchInput}
+        isLoading={isLoading}
+        isError={isError}
+        error={error}
+        serverSidePagination
+        page={page}
+        limit={limit}
+        total={data?.total}
+        totalPages={data?.totalPages}
+        onPageChange={setPage}
+        onLimitChange={setLimit}
       />
       <ExpenseFormModal
         open={isModalOpen}
         onOpenChange={setIsModalOpen}
         expense={selectedExpense}
         onSave={handleSave}
+        isSubmitting={createMutation.isPending || updateMutation.isPending}
       />
     </>
   );

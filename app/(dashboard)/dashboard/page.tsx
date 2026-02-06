@@ -5,108 +5,32 @@ import dynamic from "next/dynamic";
 import { ColumnDef } from "@tanstack/react-table";
 import { SectionCards } from "@/components/ui/section-cards";
 import { Badge } from "@/components/ui/badge";
-import { mockMembers } from "@/components/features/members/members-table";
-import { mockPlans } from "@/components/features/membership-plans/membership-plans-table";
-import { ChartSkeleton, TableSkeleton } from "@/lib/utils/lazy-loading";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useExpiringMembers } from "@/hooks/use-members";
+import type { ExpiringMember } from "@/lib/services/members";
+import { ChartSkeleton } from "@/lib/utils/lazy-loading";
+
+const MONTH_NAMES = [
+  "January", "February", "March", "April", "May", "June",
+  "July", "August", "September", "October", "November", "December",
+];
 
 // Lazy load heavy components
-const DataTable = dynamic(() => import("@/components/ui/data-table").then(mod => ({ default: mod.DataTable })), {
-  loading: () => <TableSkeleton />,
-  ssr: false,
-});
+const DataTable = dynamic(
+  () => import("@/components/ui/data-table").then((mod) => ({ default: mod.DataTable })),
+  { ssr: false }
+);
 
 const FinancialChart = dynamic(() => import("@/components/features/dashboard/financial-chart").then(mod => ({ default: mod.FinancialChart })), {
   loading: () => <ChartSkeleton />,
   ssr: false,
 });
-
-type ExpiringMember = {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  membershipType: string;
-  expirationDate: string;
-  daysRemaining: number;
-};
-
-// Helper function to calculate expiration date based on join date and membership duration
-function calculateExpirationDate(
-  joinDate: string,
-  membershipType: string
-): string {
-  const join = new Date(joinDate);
-  const plan = mockPlans.find(
-    (p: { name: string }) => p.name === membershipType
-  );
-
-  if (!plan) {
-    // Default to 1 month if plan not found
-    join.setMonth(join.getMonth() + 1);
-    return join.toISOString().split("T")[0];
-  }
-
-  const duration = plan.duration;
-  if (duration.includes("year")) {
-    join.setFullYear(join.getFullYear() + 1);
-  } else if (duration.includes("month")) {
-    const months = parseInt(duration.split(" ")[0]) || 1;
-    join.setMonth(join.getMonth() + months);
-  }
-
-  return join.toISOString().split("T")[0];
-}
-
-// Filter members whose plans expire this month
-function getExpiringMembersThisMonth(): ExpiringMember[] {
-  const now = new Date();
-  const currentMonth = now.getMonth();
-  const currentYear = now.getFullYear();
-
-  return mockMembers
-    .filter((member: { status: string }) => member.status === "active")
-    .map(
-      (member: {
-        id: string;
-        name: string;
-        email: string;
-        phone: string;
-        membershipType: string;
-        joinDate: string;
-      }) => {
-        const expirationDate = calculateExpirationDate(
-          member.joinDate,
-          member.membershipType
-        );
-        const expDate = new Date(expirationDate);
-        const daysRemaining = Math.ceil(
-          (expDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)
-        );
-
-        return {
-          id: member.id,
-          name: member.name,
-          email: member.email,
-          phone: member.phone,
-          membershipType: member.membershipType,
-          expirationDate,
-          daysRemaining,
-        };
-      }
-    )
-    .filter((member: ExpiringMember) => {
-      const expDate = new Date(member.expirationDate);
-      return (
-        expDate.getMonth() === currentMonth &&
-        expDate.getFullYear() === currentYear &&
-        member.daysRemaining >= 0
-      );
-    })
-    .sort(
-      (a: ExpiringMember, b: ExpiringMember) =>
-        a.daysRemaining - b.daysRemaining
-    );
-}
 
 const columns: ColumnDef<ExpiringMember>[] = [
   {
@@ -151,21 +75,41 @@ const columns: ColumnDef<ExpiringMember>[] = [
     cell: ({ row }) => {
       const days = row.getValue("daysRemaining") as number;
       const variant =
-        days <= 7 ? "destructive" : days <= 14 ? "secondary" : "default";
+        days < 0
+          ? "secondary"
+          : days <= 7
+            ? "destructive"
+            : days <= 14
+              ? "secondary"
+              : "default";
       return (
         <Badge variant={variant}>
-          {days === 0 ? "Expires Today" : days === 1 ? "1 Day" : `${days} Days`}
+          {days < 0
+            ? "Expired"
+            : days === 0
+              ? "Expires Today"
+              : days === 1
+                ? "1 Day"
+                : `${days} Days`}
         </Badge>
       );
     },
   },
 ];
 
+const currentDate = new Date();
+const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear() - 2 + i);
+
 export default function Page() {
-  const expiringMembers = React.useMemo(
-    () => getExpiringMembersThisMonth(),
-    []
+  const [selectedMonth, setSelectedMonth] = React.useState(String(currentDate.getMonth()));
+  const [selectedYear, setSelectedYear] = React.useState(String(currentDate.getFullYear()));
+
+  const { data: expiringMembers = [], isLoading, isError, error } = useExpiringMembers(
+    Number(selectedMonth),
+    Number(selectedYear)
   );
+
+  const monthYearLabel = `${MONTH_NAMES[Number(selectedMonth)]} ${selectedYear}`;
 
   return (
     <div className="flex flex-1 flex-col">
@@ -176,14 +120,54 @@ export default function Page() {
             <FinancialChart />
           </div>
           <DataTable
-            columns={columns}
+            columns={columns as never}
             data={expiringMembers}
             searchPlaceholder="Search expiring members..."
             showAddButton={false}
-            headerTitle="Members with Plans Expiring This Month"
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            headerTitle="Members with Plans Expiring by Month"
             headerDescription={`${expiringMembers.length} member${
               expiringMembers.length !== 1 ? "s" : ""
-            } with plans expiring this month`}
+            } with plans expiring in ${monthYearLabel}`}
+            headerAction={
+              <div className="flex items-center gap-2">
+                <Select
+                  value={selectedMonth}
+                  onValueChange={setSelectedMonth}
+                >
+                  <SelectTrigger className="w-[140px]">
+                    <SelectValue
+                      placeholder="Month"
+                      labels={Object.fromEntries(MONTH_NAMES.map((name, i) => [String(i), name]))}
+                    />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {MONTH_NAMES.map((name, i) => (
+                      <SelectItem key={name} value={String(i)}>
+                        {name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                <Select
+                  value={selectedYear}
+                  onValueChange={setSelectedYear}
+                >
+                  <SelectTrigger className="w-[100px]">
+                    <SelectValue placeholder="Year" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {YEAR_OPTIONS.map((y) => (
+                      <SelectItem key={y} value={String(y)}>
+                        {y}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            }
           />
         </div>
       </div>

@@ -4,6 +4,8 @@ import { useState } from "react";
 import { TrendingDown, TrendingUp } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+import { useDashboardOverview } from "@/hooks/use-dashboard";
+import type { TimePeriod } from "@/lib/services/dashboard";
 import {
   Card,
   CardAction,
@@ -20,8 +22,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-type TimePeriod = "monthly" | "quarterly" | "half-yearly" | "yearly";
-
 const periodLabels: Record<TimePeriod, string> = {
   monthly: "Monthly",
   quarterly: "Quarterly",
@@ -29,63 +29,20 @@ const periodLabels: Record<TimePeriod, string> = {
   yearly: "Yearly",
 };
 
-interface CardData {
-  revenue: number;
-  newCustomers: number;
-  activeAccounts: number;
-  growthRate: number;
-  revenueChange: number;
-  customersChange: number;
-  accountsChange: number;
-  growthChange: number;
-}
-
-const mockData: Record<TimePeriod, CardData> = {
-  monthly: {
-    revenue: 1250.0,
-    newCustomers: 1234,
-    activeAccounts: 45678,
-    growthRate: 4.5,
-    revenueChange: 12.5,
-    customersChange: -20,
-    accountsChange: 12.5,
-    growthChange: 4.5,
-  },
-  quarterly: {
-    revenue: 3750.0,
-    newCustomers: 3702,
-    activeAccounts: 137034,
-    growthRate: 13.5,
-    revenueChange: 15.2,
-    customersChange: -18.5,
-    accountsChange: 14.8,
-    growthChange: 5.2,
-  },
-  "half-yearly": {
-    revenue: 7500.0,
-    newCustomers: 7404,
-    activeAccounts: 274068,
-    growthRate: 27.0,
-    revenueChange: 18.5,
-    customersChange: -15.0,
-    accountsChange: 16.2,
-    growthChange: 6.5,
-  },
-  yearly: {
-    revenue: 15000.0,
-    newCustomers: 14808,
-    activeAccounts: 548136,
-    growthRate: 54.0,
-    revenueChange: 22.5,
-    customersChange: -12.0,
-    accountsChange: 18.5,
-    growthChange: 8.5,
-  },
+const defaultData = {
+  revenue: 0,
+  newCustomers: 0,
+  activeAccounts: 0,
+  growthRate: 0,
+  revenueChange: 0,
+  customersChange: 0,
+  accountsChange: 0,
+  growthChange: 0,
 };
 
 export function SectionCards() {
   const [period, setPeriod] = useState<TimePeriod>("monthly");
-  const data = mockData[period];
+  const { data = defaultData, isLoading, isError, error } = useDashboardOverview(period);
 
   return (
     <div className="space-y-4 px-4 lg:px-6">
@@ -111,16 +68,27 @@ export function SectionCards() {
           </SelectContent>
         </Select>
       </div>
+      {isError && (
+        <p className="text-sm text-destructive">
+          {error instanceof Error ? error.message : "Failed to load overview"}
+        </p>
+      )}
       <div className="*:data-[slot=card]:from-primary/5 *:data-[slot=card]:to-card dark:*:data-[slot=card]:bg-card grid grid-cols-1 gap-4 *:data-[slot=card]:bg-gradient-to-t *:data-[slot=card]:shadow-xs @xl/main:grid-cols-2 @5xl/main:grid-cols-4">
         <Card className="@container/card">
           <CardHeader>
             <CardDescription>Total Revenue</CardDescription>
             <CardTitle className="text-2xl font-semibold tabular-nums @[250px]/card:text-3xl">
-              Rs.
-              {data.revenue.toLocaleString("en-US", {
-                minimumFractionDigits: 2,
-                maximumFractionDigits: 2,
-              })}
+              {isLoading ? (
+                "—"
+              ) : (
+                <>
+                  Rs.
+                  {data.revenue.toLocaleString("en-US", {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 2,
+                  })}
+                </>
+              )}
             </CardTitle>
             <CardAction>
               <Badge variant="outline">

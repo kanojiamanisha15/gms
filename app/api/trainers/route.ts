@@ -1,0 +1,172 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { query, queryOne } from '@/lib/db/db';
+import { requireAuth } from '@/lib/services/auth';
+import { insertNotification } from '@/lib/db/notifications';
+import type { ITrainerData, ITrainerRow } from '@/types';
+
+function mapTrainerRowToResponse(row: ITrainerRow): ITrainerData {
+  return {
+    id: row.id,
+    name: row.name,
+    email: row.email,
+    phone: row.phone,
+    role: row.role,
+    hireDate: row.hire_date,
+    status: row.status,
+    createdAt: row.created_at instanceof Date ? row.created_at.toISOString() : String(row.created_at),
+    updatedAt: row.updated_at instanceof Date ? row.updated_at.toISOString() : String(row.updated_at),
+  };
+}
+
+/** GET /api/trainers - Return paginated list of trainers (requires auth). Query: page, limit, search */
+export async function GET(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (auth.error) return auth.error;
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const search = searchParams.get('search');
+    const page = parseInt(searchParams.get('page') ?? '1', 10);
+    const limit = parseInt(searchParams.get('limit') ?? '10', 10);
+
+    const pageNum = Math.max(1, page);
+    const limitNum = Math.min(Math.max(1, limit), 100);
+    const offset = (pageNum - 1) * limitNum;
+
+    const sqlParams: (string | number)[] = [];
+    const conditions: string[] = [];
+    let paramIndex = 1;
+
+    if (search?.trim()) {
+      conditions.push(
+        `(name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR phone ILIKE $${paramIndex})`
+      );
+      sqlParams.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    const whereSql = conditions.length > 0 ? ' WHERE ' + conditions.join(' AND ') : '';
+
+    const countRows = await query<{ total: string }>(
+      `SELECT COUNT(*) as total FROM trainers${whereSql}`,
+      sqlParams
+    );
+    const total = parseInt(countRows[0]?.total ?? '0', 10);
+    const totalPages = Math.ceil(total / limitNum);
+
+    const trainersSql = `
+      SELECT id, name, email, phone, role, hire_date, status,
+             created_at, updated_at
+      FROM trainers
+      ${whereSql}
+      ORDER BY created_at DESC
+      LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
+    `;
+    const trainerRows = await query<ITrainerRow>(trainersSql, [...sqlParams, limitNum, offset]);
+    const trainers = trainerRows.map(mapTrainerRowToResponse);
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        trainers,
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages,
+        hasNextPage: pageNum < totalPages,
+        hasPreviousPage: pageNum > 1,
+      },
+    });
+  } catch (error) {
+    console.error('Get trainers error:', error);
+    return NextResponse.json(
+      { success: false, error: 'Failed to fetch trainers' },
+      { status: 500 }
+    );
+  }
+}
+
+/** POST /api/trainers - Create a new trainer (requires auth). */
+export async function POST(request: NextRequest) {
+  const auth = requireAuth(request);
+  if (auth.error) return auth.error;
+
+  try {
+    const body = (await request.json()) as {
+      name?: string;
+      email?: string;
+      phone?: string | null;
+      role?: string;
+      hireDate?: string;
+      status?: string;
+    };
+
+    const name = typeof body.name === 'string' ? body.name.trim() : '';
+    const email = body.email != null ? (String(body.email).trim() || null) : null;
+    const phone = body.phone != null ? (String(body.phone).trim() || null) : null;
+    const roleRaw = body.role ?? 'Trainer';
+    const role = roleRaw === 'Staff' ? 'Staff' : 'Trainer';
+    const hireDateRaw = body.hireDate ?? new Date().toISOString().split('T')[0];
+    const hireDate = String(hireDateRaw).trim();
+    const status = body.status === 'inactive' ? 'inactive' : 'active';
+
+    if (!name) {
+      return NextResponse.json(
+        { success: false, error: 'Name is required' },
+        { status: 400 }
+      );
+    }
+    if (!phone) {
+      return NextResponse.json(
+        { success: false, error: 'Phone is required' },
+        { status: 400 }
+      );
+    }
+    if (!hireDate) {
+      return NextResponse.json(
+        { success: false, error: 'Hire date is required' },
+        { status: 400 }
+      );
+    }
+
+    const insertSql = `
+      INSERT INTO trainers (name, email, phone, role, hire_date, status)
+      VALUES ($1, $2, $3, $4, $5::date, $6)
+      RETURNING id, name, email, phone, role, hire_date, status,
+                created_at, updated_at
+    `;
+    const trainerRow = await queryOne<ITrainerRow>(insertSql, [
+      name,
+      email ?? '',
+      phone,
+      role,
+      hireDate,
+      status,
+    ]);
+
+    if (!trainerRow) {
+      return NextResponse.json(
+        { success: false, error: 'Failed to create trainer' },
+        { status: 500 }
+      );
+    }
+
+    await insertNotification(
+      'New Trainer Added',
+      `${name} has been added as a new ${role.toLowerCase()}.`,
+      'info'
+    );
+
+    return NextResponse.json({
+      success: true,
+      data: { trainer: mapTrainerRowToResponse(trainerRow) },
+    });
+  } catch (error) {
+    console.error('Add trainer error:', error);
+    const message = error instanceof Error ? error.message : 'Failed to create trainer';
+    return NextResponse.json(
+      { success: false, error: message },
+      { status: 500 }
+    );
+  }
+}

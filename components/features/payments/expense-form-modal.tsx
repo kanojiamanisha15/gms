@@ -27,11 +27,12 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import { Expense } from "./expenses-table";
+import type { IExpenseData } from "@/types";
+import { formatDateForInput } from "@/lib/helpers";
 
 type ExpenseFormData = {
   category: string;
-  description: string;
+  description?: string;
   amount: number;
   date: string;
   status: "paid" | "pending" | "overdue";
@@ -59,8 +60,9 @@ const statusLabels: Record<ExpenseFormData["status"], string> = {
 interface ExpenseFormModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  expense?: Expense | null;
-  onSave: (data: ExpenseFormData) => void;
+  expense?: IExpenseData | null;
+  onSave: (data: ExpenseFormData) => void | Promise<void>;
+  isSubmitting?: boolean;
 }
 
 export function ExpenseFormModal({
@@ -68,6 +70,7 @@ export function ExpenseFormModal({
   onOpenChange,
   expense,
   onSave,
+  isSubmitting = false,
 }: ExpenseFormModalProps) {
   const isEditMode = !!expense;
 
@@ -86,11 +89,11 @@ export function ExpenseFormModal({
     if (expense) {
       form.reset({
         category: expense.category,
-        description: expense.description,
+        description: expense.description ?? "",
         amount: expense.amount,
-        date: expense.date,
-        status: expense.status,
-        vendor: expense.vendor || "",
+        date: formatDateForInput(expense.date),
+        status: expense.status as ExpenseFormData["status"],
+        vendor: expense.vendor ?? "",
       });
     } else {
       form.reset({
@@ -106,7 +109,7 @@ export function ExpenseFormModal({
 
   const onSubmit = async (data: ExpenseFormData) => {
     try {
-      onSave(data);
+      await onSave(data);
       onOpenChange(false);
       form.reset();
     } catch (error) {
@@ -204,7 +207,12 @@ export function ExpenseFormModal({
                   <FormItem>
                     <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} />
+                      <Input
+                        type="date"
+                        {...field}
+                        value={formatDateForInput(field.value) || ""}
+                        onChange={(e) => field.onChange(e.target.value)}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -249,20 +257,13 @@ export function ExpenseFormModal({
               name="description"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Description (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="Enter expense description" {...field} />
+                    <Input placeholder="Enter expense description" {...field} value={field.value ?? ""} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
               )}
-              rules={{
-                required: "Description is required",
-                minLength: {
-                  value: 3,
-                  message: "Description must be at least 3 characters",
-                },
-              }}
             />
 
             <FormField
@@ -287,8 +288,8 @@ export function ExpenseFormModal({
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={form.formState.isSubmitting}>
-                {form.formState.isSubmitting
+              <Button type="submit" disabled={form.formState.isSubmitting || isSubmitting}>
+                {(form.formState.isSubmitting || isSubmitting)
                   ? isEditMode
                     ? "Updating..."
                     : "Adding..."

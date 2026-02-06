@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Nunito_Sans } from "next/font/google";
 import { Toaster } from "sonner";
 import { QueryProvider } from "@/lib/providers/query-provider";
+import { StoreProvider } from "@/lib/providers/store-provider";
 import "./globals.css";
 
 const nunitoSans = Nunito_Sans({
@@ -25,10 +26,12 @@ export default function RootLayout({
         className={`${nunitoSans.variable} antialiased`}
         style={{ fontFamily: "var(--font-nunito-sans), sans-serif" }}
       >
-        <QueryProvider>
-          {children}
-          <Toaster position="top-right" richColors />
-        </QueryProvider>
+        <StoreProvider>
+          <QueryProvider>
+            {children}
+            <Toaster position="top-right" richColors />
+          </QueryProvider>
+        </StoreProvider>
       </body>
     </html>
   );

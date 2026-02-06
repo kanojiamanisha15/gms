@@ -45,7 +45,12 @@ const roleLabels: Record<string, string> = {
 };
 
 export default function RegisterPage() {
-  const registerMutation = useRegister();
+  const {
+    mutate: register,
+    isPending,
+    isError,
+    error,
+  } = useRegister();
   const form = useForm<RegisterFormValues>({
     defaultValues: {
       name: "",
@@ -56,7 +61,7 @@ export default function RegisterPage() {
   });
 
   const onSubmit = (data: RegisterFormValues) => {
-    registerMutation.mutate({
+    register({
       name: data.name,
       email: data.email,
       password: data.password,
@@ -94,7 +99,7 @@ export default function RegisterPage() {
                         type="text"
                         placeholder="John Doe"
                         {...field}
-                        disabled={registerMutation.isPending}
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -119,7 +124,7 @@ export default function RegisterPage() {
                         type="email"
                         placeholder="name@example.com"
                         {...field}
-                        disabled={registerMutation.isPending}
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -143,7 +148,7 @@ export default function RegisterPage() {
                       <PasswordInput
                         placeholder="Enter your password"
                         {...field}
-                        disabled={registerMutation.isPending}
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -166,7 +171,7 @@ export default function RegisterPage() {
                       >
                         <SelectTrigger 
                           className="w-full" 
-                          disabled={registerMutation.isPending}
+                          disabled={isPending}
                         >
                           <SelectValue placeholder="Select a role" labels={roleLabels} />
                         </SelectTrigger>
@@ -182,8 +187,13 @@ export default function RegisterPage() {
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={registerMutation.isPending}>
-                {registerMutation.isPending ? "Creating account..." : "Create account"}
+              {isError && (
+                <p className="text-sm text-destructive">
+                  {error instanceof Error ? error.message : "An error occurred. Please try again."}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? "Creating account..." : "Create account"}
               </Button>
             </form>
           </Form>

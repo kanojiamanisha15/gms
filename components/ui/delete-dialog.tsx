@@ -17,6 +17,7 @@ interface DeleteDialogProps {
   onConfirm: () => void;
   entityName?: string;
   itemName?: string;
+  isLoading?: boolean;
 }
 
 export function DeleteDialog({
@@ -25,10 +26,11 @@ export function DeleteDialog({
   onConfirm,
   entityName = "item",
   itemName,
+  isLoading = false,
 }: DeleteDialogProps) {
   const handleConfirm = () => {
+    if (isLoading) return;
     onConfirm();
-    onOpenChange(false);
   };
 
   return (
@@ -51,11 +53,17 @@ export function DeleteDialog({
             type="button"
             variant="outline"
             onClick={() => onOpenChange(false)}
+            disabled={isLoading}
           >
             Cancel
           </Button>
-          <Button type="button" variant="destructive" onClick={handleConfirm}>
-            Delete
+          <Button
+            type="button"
+            variant="destructive"
+            onClick={handleConfirm}
+            disabled={isLoading}
+          >
+            {isLoading ? "Deleting..." : "Delete"}
           </Button>
         </DialogFooter>
       </DialogContent>

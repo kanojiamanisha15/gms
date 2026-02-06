@@ -28,7 +28,12 @@ type LoginFormValues = {
 };
 
 export default function LoginPage() {
-  const loginMutation = useLogin();
+  const {
+    mutate: login,
+    isPending,
+    isError,
+    error,
+  } = useLogin();
   const form = useForm<LoginFormValues>({
     defaultValues: {
       email: "",
@@ -37,7 +42,7 @@ export default function LoginPage() {
   });
 
   const onSubmit = (data: LoginFormValues) => {
-    loginMutation.mutate({
+    login({
       email: data.email,
       password: data.password,
     });
@@ -73,7 +78,7 @@ export default function LoginPage() {
                         type="email"
                         placeholder="name@example.com"
                         {...field}
-                        disabled={loginMutation.isPending}
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
@@ -105,15 +110,20 @@ export default function LoginPage() {
                       <PasswordInput
                         placeholder="Enter your password"
                         {...field}
-                        disabled={loginMutation.isPending}
+                        disabled={isPending}
                       />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <Button type="submit" className="w-full" disabled={loginMutation.isPending}>
-                {loginMutation.isPending ? "Signing in..." : "Sign in"}
+              {isError && (
+                <p className="text-sm text-destructive">
+                  {error instanceof Error ? error.message : "An error occurred. Please try again."}
+                </p>
+              )}
+              <Button type="submit" className="w-full" disabled={isPending}>
+                {isPending ? "Signing in..." : "Sign in"}
               </Button>
             </form>
           </Form>

@@ -28,20 +28,6 @@ export function lazyLoad<P extends object>(
   });
 }
 
-/** Loading skeleton component for tables */
-export function TableSkeleton() {
-  return (
-    <div className="space-y-4 p-4">
-      <div className="h-10 bg-muted animate-pulse rounded-md" />
-      <div className="space-y-2">
-        {Array.from({ length: 5 }).map((_, i) => (
-          <div key={i} className="h-12 bg-muted animate-pulse rounded-md" />
-        ))}
-      </div>
-    </div>
-  );
-}
-
 /** Loading skeleton component for charts */
 export function ChartSkeleton() {
   return (

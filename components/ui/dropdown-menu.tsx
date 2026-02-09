@@ -237,15 +237,17 @@ function DropdownMenuItem({
   };
 
   if (asChild && React.isValidElement(children)) {
+    const childElement = children as React.ReactElement<{ className?: string }>;
+    const childProps = childElement.props as { className?: string } | undefined;
     return React.cloneElement(
-      children as React.ReactElement,
+      childElement,
       {
         ...itemProps,
         className: cn(
           itemProps.className,
-          (children as React.ReactElement).props.className
+          childProps?.className
         ),
-      } as any
+      }
     );
   }
 

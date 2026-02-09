@@ -145,18 +145,18 @@ export function DataTable<TData, TValue>({
   const displayHeader =
     header ||
     (headerTitle && (
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h2 className="text-2xl font-semibold tracking-tight">
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+        <div className="min-w-0 flex-1">
+          <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
             {headerTitle}
           </h2>
           {headerDescription && (
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="mt-1 text-sm text-muted-foreground">
               {headerDescription}
             </p>
           )}
         </div>
-        {headerAction && <div className="shrink-0">{headerAction}</div>}
+        {headerAction && <div className="w-full shrink-0 sm:w-auto">{headerAction}</div>}
       </div>
     ));
 

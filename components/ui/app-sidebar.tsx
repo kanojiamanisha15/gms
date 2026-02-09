@@ -59,11 +59,11 @@ const data = {
       url: "/payments",
       icon: Receipt,
     },
-    {
-      title: "Attendance Tracker",
-      url: "/attendance",
-      icon: ClipboardCheck,
-    },
+    // {
+    //   title: "Attendance Tracker",
+    //   url: "/attendance",
+    //   icon: ClipboardCheck,
+    // },
   ],
   navSecondary: [
     // {

@@ -1,10 +1,10 @@
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken';
+import jwt, { type SignOptions } from 'jsonwebtoken';
 import { NextRequest, NextResponse } from 'next/server';
 import type { TokenPayload } from '@/types/auth';
 
-const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
-const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '7d';
+const JWT_SECRET: string = process.env.JWT_SECRET || 'your-secret-key-change-in-production';
+const JWT_EXPIRES_IN: string = process.env.JWT_EXPIRES_IN || '7d';
 
 // Re-export for convenience
 export type { TokenPayload };
@@ -25,9 +25,9 @@ export async function comparePassword(
 
 /** Generate a JWT token*/
 export function generateToken(payload: TokenPayload): string {
-  return jwt.sign(payload as object, JWT_SECRET, {
+  return jwt.sign(payload, JWT_SECRET, {
     expiresIn: JWT_EXPIRES_IN,
-  });
+  } as SignOptions);
 }
 
 /** Verify a JWT token*/

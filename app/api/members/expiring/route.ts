@@ -55,10 +55,11 @@ export async function GET(request: NextRequest) {
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
     const members = rows.map((row) => {
+      const expiryDate = row.expiry_date as string | Date;
       const expiryDateStr =
-        row.expiry_date instanceof Date
-          ? row.expiry_date.toISOString().split('T')[0]
-          : String(row.expiry_date);
+        expiryDate instanceof Date
+          ? expiryDate.toISOString().split('T')[0]
+          : String(expiryDate);
       const expDate = new Date(expiryDateStr);
       const daysRemaining = Math.ceil(
         (expDate.getTime() - todayStart) / (1000 * 60 * 60 * 24)

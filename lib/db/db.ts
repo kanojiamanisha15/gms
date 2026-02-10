@@ -1,12 +1,14 @@
 import { Pool } from 'pg';
 
-// Database connection pool
-let pool: Pool | null = null;
+// Database connection pool - using an object wrapper to avoid ESM/Turbopack issues
+const poolState: { pool: Pool | null } = {
+  pool: null,
+};
 
 /** Get or create a PostgreSQL connection pool Uses singleton pattern to reuse connections*/
 export function getPool(): Pool {
-  if (!pool) {
-    pool = new Pool({
+  if (!poolState.pool) {
+    poolState.pool = new Pool({
       host: process.env.DB_HOST || 'localhost',
       port: parseInt(process.env.DB_PORT || '5432'),
       database: process.env.DB_NAME || 'gms',
@@ -19,12 +21,12 @@ export function getPool(): Pool {
     });
 
     // Handle pool errors
-    pool.on('error', (err) => {
+    poolState.pool.on('error', (err) => {
       console.error('Unexpected error on idle client', err);
     });
   }
 
-  return pool;
+  return poolState.pool;
 }
 
 /** Execute a query and return the result*/
@@ -61,8 +63,8 @@ export async function checkConnection(): Promise<boolean> {
 
 /** Close the database connection pool Useful for cleanup in tests or shutdown procedures*/
 export async function closePool(): Promise<void> {
-  if (pool) {
-    await pool.end();
-    pool = null;
+  if (poolState.pool) {
+    await poolState.pool.end();
+    poolState.pool = null;
   }
 }

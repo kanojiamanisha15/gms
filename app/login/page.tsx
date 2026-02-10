@@ -42,6 +42,11 @@ export default function LoginPage() {
   });
 
   const onSubmit = (data: LoginFormValues) => {
+    // Prevent double submission
+    if (isPending) {
+      return;
+    }
+    
     login({
       email: data.email,
       password: data.password,

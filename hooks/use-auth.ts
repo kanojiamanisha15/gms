@@ -17,6 +17,7 @@ export function useLogin() {
 
   return useMutation({
     mutationFn: (credentials: LoginCredentials) => login(credentials),
+    retry: false, // Prevent retries to avoid double API calls
     onSuccess: (data) => {
       if (data.success) {
         toast.success("Login successful!");

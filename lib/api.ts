@@ -3,7 +3,7 @@ import { toast } from "sonner";
 import { API_BASE_URL } from "@/lib/constants/api";
 
 // Get API URL from environment or use default (origin only, e.g. http://localhost:3000)
-const apiURL = process.env.NEXT_PUBLIC_API_URL || API_BASE_URL || "http://localhost:3000";
+const apiURL = process.env.NEXT_PUBLIC_APP_URL || API_BASE_URL || "http://localhost:3000";
 
 // Create Axios instance
 const api = axios.create({

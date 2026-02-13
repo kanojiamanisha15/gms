@@ -7,7 +7,8 @@ const apiURL = process.env.NEXT_PUBLIC_APP_URL || API_BASE_URL || "http://localh
 
 // Create Axios instance
 const api = axios.create({
-  baseURL: `${apiURL}`,
+  // baseURL: `${apiURL}`,
+  baseURL: ``,
   timeout: 600000, // 10 minutes timeout (for large file uploads)
   headers: {
     "Content-Type": "application/json",

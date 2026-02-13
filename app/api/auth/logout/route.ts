@@ -1,20 +1,13 @@
 import { NextResponse } from 'next/server';
+import { getAuthCookieClearOptions } from '@/lib/constants/cookies';
 
-/** POST /api/auth/logout Clear authentication cookie*/
+/** POST /api/auth/logout Clear authentication cookie (must use same path/domain as login) */
 export async function POST() {
   const response = NextResponse.json({
     success: true,
     message: 'Logged out successfully',
   });
 
-  // Clear the auth token cookie
-  response.cookies.set('auth_token', '', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
-    maxAge: 0, // Expire immediately
-    path: '/',
-  });
-
+  response.cookies.set('auth_token', '', getAuthCookieClearOptions());
   return response;
 }

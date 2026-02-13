@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { queryOne } from '@/lib/db/db';
 import { hashPassword, generateToken } from '@/lib/services/auth';
+import { getAuthCookieSetOptions } from '@/lib/constants/cookies';
 
 /** POST /api/auth/register Register a new user*/
 export async function POST(request: NextRequest) {
@@ -94,13 +95,7 @@ export async function POST(request: NextRequest) {
     );
 
     // Set HTTP-only cookie for middleware access
-    response.cookies.set('auth_token', token, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
-      path: '/',
-    });
+    response.cookies.set('auth_token', token, getAuthCookieSetOptions());
 
     return response;
   } catch (error: any) {

@@ -53,7 +53,7 @@ const user = await queryOne('SELECT * FROM users WHERE id = $1', [userId]);
    - Option 2: Use the initialization script (requires tsx):
      ```bash
      npm install -g tsx
-     npx tsx lib/db-init.ts
+     npx tsx lib/db/db-init.ts
      ```
    - The init script also seeds a **default admin user** (if not already present).
 

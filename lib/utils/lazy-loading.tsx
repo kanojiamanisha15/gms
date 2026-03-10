@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import dynamic from "next/dynamic";
+import { LoadingState } from "@/components/ui/loading-state";
 
 /** Higher-order component for lazy loading with Suspense fallback */
 export function withLazyLoading<P extends object>(
@@ -9,7 +10,7 @@ export function withLazyLoading<P extends object>(
   fallback?: React.ReactNode
 ) {
   return dynamic(() => Promise.resolve(Component), {
-    loading: () => fallback || <div className="flex items-center justify-center p-4">Loading...</div>,
+    loading: () => fallback || <LoadingState className="p-4" />,
     ssr: false,
   });
 }
@@ -23,7 +24,7 @@ export function lazyLoad<P extends object>(
   }
 ) {
   return dynamic(importFn, {
-    loading: () => options?.fallback || <div className="flex items-center justify-center p-4">Loading...</div>,
+    loading: () => options?.fallback || <LoadingState className="p-4" />,
     ssr: options?.ssr ?? false,
   });
 }

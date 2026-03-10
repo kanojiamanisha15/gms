@@ -7,6 +7,7 @@ import { PageContent } from "@/components/ui/page-content";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -26,8 +27,9 @@ import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { useMember, useCreateMember, useUpdateMember } from "@/hooks/use-members";
 import { useAllMembershipPlans } from "@/hooks/use-membership-plans";
-import { formatDateForInput, calculateExpirationDate } from "@/lib/helpers";
+import { formatDateForInput, calculateExpirationDate, getTodayLocal } from "@/lib/helpers";
 import { PhoneInput } from "@/components/ui/phone-input";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type MemberFormData = {
   name: string;
@@ -79,7 +81,7 @@ export default function AddMemberPage() {
       email: "",
       phone: "",
       membershipType: "",
-      joinDate: new Date().toISOString().split("T")[0],
+      joinDate: getTodayLocal(),
       expiryDate: "",
       status: "active",
       paymentStatus: "unpaid",
@@ -164,7 +166,9 @@ export default function AddMemberPage() {
       }
     >
       <div className="px-4 lg:px-6 space-y-4">
-        {showLoading ? <div>Loading...</div>:
+        {showLoading ? (
+          <LoadingState message="Loading Member..." className="py-12" />
+        ) :
         showError ? (
           <Card>
             <CardContent className="pt-6">
@@ -200,7 +204,7 @@ export default function AddMemberPage() {
                 onSubmit={form.handleSubmit(onSubmit)}
                 className="space-y-6"
               >
-                <div className="grid gap-6 md:grid-cols-2">
+                <div className="grid gap-6 lg:grid-cols-2">
                   <FormField
                     control={form.control}
                     name="name"
@@ -303,7 +307,7 @@ export default function AddMemberPage() {
                       <FormItem>
                         <FormLabel>Join Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} />
+                          <DateInput {...field} />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -320,7 +324,7 @@ export default function AddMemberPage() {
                       <FormItem>
                         <FormLabel>Expiry Date</FormLabel>
                         <FormControl>
-                          <Input type="date" {...field} disabled />
+                          <DateInput {...field} disabled />
                         </FormControl>
                         <FormMessage />
                       </FormItem>

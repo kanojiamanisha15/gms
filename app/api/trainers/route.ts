@@ -18,7 +18,11 @@ function mapTrainerRowToResponse(row: ITrainerRow): ITrainerData {
   };
 }
 
-/** GET /api/trainers - Return paginated list of trainers (requires auth). Query: page, limit, search */
+const TRAINERS_SORT_COLUMNS = [
+  'name', 'email', 'phone', 'role', 'hire_date', 'status', 'created_at', 'updated_at',
+] as const;
+
+/** GET /api/trainers - Return paginated list of trainers (requires auth). Query: page, limit, search, sortBy, sortOrder */
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
   if (auth.error) return auth.error;
@@ -26,12 +30,24 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const status = searchParams.get('status');
+    const role = searchParams.get('role');
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const limit = parseInt(searchParams.get('limit') ?? '10', 10);
+    const sortByRaw = searchParams.get('sortBy');
+    const sortOrderRaw = searchParams.get('sortOrder');
 
     const pageNum = Math.max(1, page);
     const limitNum = Math.min(Math.max(1, limit), 100);
     const offset = (pageNum - 1) * limitNum;
+
+    const sortBy = sortByRaw && TRAINERS_SORT_COLUMNS.includes(sortByRaw as any)
+      ? sortByRaw
+      : 'created_at';
+    const sortOrder = sortOrderRaw === 'asc' ? 'ASC' : 'DESC';
+
+    const validStatuses = ['active', 'inactive'];
+    const validRoles = ['Trainer', 'Staff'];
 
     const sqlParams: (string | number)[] = [];
     const conditions: string[] = [];
@@ -42,6 +58,18 @@ export async function GET(request: NextRequest) {
         `(name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR phone ILIKE $${paramIndex})`
       );
       sqlParams.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    if (status?.trim() && validStatuses.includes(status.trim())) {
+      conditions.push(`status = $${paramIndex}`);
+      sqlParams.push(status.trim());
+      paramIndex++;
+    }
+
+    if (role?.trim() && validRoles.includes(role.trim())) {
+      conditions.push(`role = $${paramIndex}`);
+      sqlParams.push(role.trim());
       paramIndex++;
     }
 
@@ -59,7 +87,7 @@ export async function GET(request: NextRequest) {
              created_at, updated_at
       FROM trainers
       ${whereSql}
-      ORDER BY created_at DESC
+      ORDER BY ${sortBy} ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     const trainerRows = await query<ITrainerRow>(trainersSql, [...sqlParams, limitNum, offset]);

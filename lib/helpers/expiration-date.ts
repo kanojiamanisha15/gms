@@ -1,3 +1,5 @@
+import { toLocalDateString } from "./local-date";
+
 export function calculateExpirationDate(
   joinDate: string,
   duration?: string
@@ -6,7 +8,7 @@ export function calculateExpirationDate(
 
   if (!duration) {
     join.setMonth(join.getMonth() + 1);
-    return join.toISOString().split("T")[0];
+    return toLocalDateString(join);
   }
 
   if (duration.toLowerCase().includes("year")) {
@@ -18,5 +20,5 @@ export function calculateExpirationDate(
     join.setMonth(join.getMonth() + 1);
   }
 
-  return join.toISOString().split("T")[0];
+  return toLocalDateString(join);
 }

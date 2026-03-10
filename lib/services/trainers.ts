@@ -31,11 +31,15 @@ type TrainerByIdResponse = {
   error?: string;
 };
 
-// GET /api/trainers - Get all trainers with pagination
+// GET /api/trainers - Get all trainers with pagination and sorting
 export const doGetTrainers = async (params?: {
   search?: string;
+  status?: string;
+  role?: string;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<{
   trainers: ITrainerData[];
   page: number;
@@ -48,13 +52,19 @@ export const doGetTrainers = async (params?: {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
 
+  const queryParams: Record<string, string> = {
+    page: page.toString(),
+    limit: limit.toString(),
+  };
+  if (params?.search?.trim()) queryParams.search = params.search.trim();
+  if (params?.status?.trim()) queryParams.status = params.status.trim();
+  if (params?.role?.trim()) queryParams.role = params.role.trim();
+  if (params?.sortBy) queryParams.sortBy = params.sortBy;
+  if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
+
   const response = await getRequest<TrainersListResponse>(
     API_ENDPOINTS.TRAINERS,
-    {
-      search: params?.search?.trim(),
-      page: page.toString(),
-      limit: limit.toString(),
-    }
+    queryParams
   );
 
   if (!response?.success) {

@@ -31,11 +31,13 @@ type PlanByIdResponse = {
   error?: string;
 };
 
-// GET /api/membership-plans - Get all plans with pagination
+// GET /api/membership-plans - Get all plans with pagination and sorting
 export const doGetMembershipPlans = async (params?: {
   search?: string;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<{
   plans: IMembershipPlanData[];
   page: number;
@@ -48,13 +50,17 @@ export const doGetMembershipPlans = async (params?: {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
 
+  const queryParams: Record<string, string> = {
+    page: page.toString(),
+    limit: limit.toString(),
+  };
+  if (params?.search?.trim()) queryParams.search = params.search.trim();
+  if (params?.sortBy) queryParams.sortBy = params.sortBy;
+  if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
+
   const response = await getRequest<PlansListResponse>(
     API_ENDPOINTS.MEMBERSHIP_PLANS,
-    {
-      search: params?.search?.trim(),
-      page: page.toString(),
-      limit: limit.toString(),
-    }
+    queryParams
   );
 
   if (!response?.success) {

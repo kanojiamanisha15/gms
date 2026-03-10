@@ -63,6 +63,7 @@ const columns: ColumnDef<IMembershipPlanData>[] = [
   {
     accessorKey: "name",
     header: "Plan Name",
+    meta: { sortKey: "name" },
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("name")}</div>
     ),
@@ -70,6 +71,7 @@ const columns: ColumnDef<IMembershipPlanData>[] = [
   {
     accessorKey: "price",
     header: "Price",
+    meta: { sortKey: "price" },
     cell: ({ row }) => {
       const price = parseFloat(String(row.getValue("price")));
       return <div>Rs.{price.toFixed(2)}</div>;
@@ -78,6 +80,7 @@ const columns: ColumnDef<IMembershipPlanData>[] = [
   {
     accessorKey: "duration",
     header: "Duration",
+    meta: { sortKey: "duration_days" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("duration")}</div>
     ),
@@ -85,16 +88,20 @@ const columns: ColumnDef<IMembershipPlanData>[] = [
   {
     accessorKey: "features",
     header: "Features",
+    meta: { sortKey: "features", cellClassName: "max-w-[30rem] min-w-[30rem] whitespace-normal" },
     cell: ({ row }) => {
       const features = row.getValue("features") as string;
       return (
-        <div className="max-w-md text-sm text-muted-foreground">{features ?? ""}</div>
+        <div className="break-words whitespace-normal text-sm text-muted-foreground">
+          {features ?? ""}
+        </div>
       );
     },
   },
   {
     accessorKey: "status",
     header: "Status",
+    meta: { sortKey: "status" },
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       const statusConfig: Record<
@@ -124,19 +131,23 @@ const columns: ColumnDef<IMembershipPlanData>[] = [
 ];
 
 export function MembershipPlansTable() {
-  const { setSearchInput, setPage, setLimit } = useMembershipPlansTableActions();
+  const { setSearchInput, setPage, setLimit, setSort } = useMembershipPlansTableActions();
   const searchInput = useAppSelector((s) => s.membershipPlansTable.searchInput);
   const page = useAppSelector((s) => s.membershipPlansTable.page);
   const limit = useAppSelector((s) => s.membershipPlansTable.limit);
+  const sortBy = useAppSelector((s) => s.membershipPlansTable.sortBy);
+  const sortOrder = useAppSelector((s) => s.membershipPlansTable.sortOrder);
   const debouncedSearch = useDebounce(searchInput, 300);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["membership-plans", debouncedSearch, page, limit],
+    queryKey: ["membership-plans", debouncedSearch, page, limit, sortBy, sortOrder],
     queryFn: () =>
       doGetMembershipPlans({
         search: debouncedSearch || undefined,
         page,
         limit,
+        sortBy,
+        sortOrder,
       }),
   });
   const plans: IMembershipPlanData[] = data?.plans ?? [];
@@ -162,6 +173,10 @@ export function MembershipPlansTable() {
       totalPages={data?.totalPages}
       onPageChange={setPage}
       onLimitChange={setLimit}
+      sortBy={sortBy}
+      sortOrder={sortOrder}
+      onSortChange={setSort}
+      toolbarClassName="w-full md:w-auto"
     />
   );
 }

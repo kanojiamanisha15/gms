@@ -1,7 +1,6 @@
 "use client";
 
 import { Bar, BarChart, CartesianGrid, XAxis, YAxis, Legend } from "recharts";
-import { Loader2 } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -15,6 +14,7 @@ import {
   ChartTooltipContent,
   type ChartConfig,
 } from "@/components/ui/chart";
+import { LoadingState } from "@/components/ui/loading-state";
 import { usePaymentsOverview } from "@/hooks/use-payments";
 
 const chartConfig = {
@@ -48,9 +48,10 @@ export function PaymentsChart() {
           </p>
         ):
         isLoading ? (
-          <div className="h-[350px] w-full flex items-center justify-center bg-muted/50 rounded-lg">
-            <Loader2 className="h-10 w-10 animate-spin text-muted-foreground" />
-          </div>
+          <LoadingState
+            className="h-[260px] w-full rounded-lg bg-muted/50 sm:h-[320px] lg:h-[350px]"
+            iconClassName="h-10 w-10"
+          />
         ) : (
           <ChartContainer config={chartConfig} className="h-[350px] w-full">
             <BarChart

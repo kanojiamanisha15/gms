@@ -8,11 +8,21 @@ import {
 } from "@/lib/services/members";
 import type { ICreateMemberData, IUpdateMemberData } from "@/types";
 
-/** Hook to fetch members expiring in a given month/year */
-export function useExpiringMembers(month: number, year: number) {
+/** Hook to fetch members expiring in a given month/year, with optional sorting */
+export function useExpiringMembers(
+  month: number,
+  year: number,
+  options?: { sortBy?: string; sortOrder?: "asc" | "desc" }
+) {
   return useQuery({
-    queryKey: ["members", "expiring", month, year],
-    queryFn: () => doGetExpiringMembers({ month, year }),
+    queryKey: ["members", "expiring", month, year, options?.sortBy, options?.sortOrder],
+    queryFn: () =>
+      doGetExpiringMembers({
+        month,
+        year,
+        sortBy: options?.sortBy,
+        sortOrder: options?.sortOrder,
+      }),
     enabled: month >= 0 && month <= 11 && year >= 1900 && year <= 2100,
   });
 }

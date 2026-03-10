@@ -51,7 +51,7 @@ export function NavSecondary({
                       "bg-primary text-primary-foreground hover:bg-primary/90 data-[active=true]:bg-primary data-[active=true]:text-primary-foreground"
                   )}
                 >
-                  <Link href={item.url} onClick={closeSidebar}>
+                  <Link href={item.url} onClick={isMobile ? closeSidebar : undefined}>
                     <item.icon />
                     <span>{item.title}</span>
                   </Link>

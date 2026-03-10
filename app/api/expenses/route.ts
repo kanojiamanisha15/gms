@@ -18,7 +18,11 @@ function mapExpenseRowToResponse(row: IExpenseRow): IExpenseData {
   };
 }
 
-/** GET /api/expenses - Return paginated list of expenses (requires auth). Query: page, limit, search, startDate, endDate */
+const EXPENSES_SORT_COLUMNS = [
+  'category', 'description', 'amount', 'date', 'status', 'vendor', 'created_at', 'updated_at',
+] as const;
+
+/** GET /api/expenses - Return paginated list of expenses (requires auth). Query: page, limit, search, startDate, endDate, sortBy, sortOrder */
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
   if (auth.error) return auth.error;
@@ -26,14 +30,24 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const status = searchParams.get('status');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const limit = parseInt(searchParams.get('limit') ?? '10', 10);
+    const sortByRaw = searchParams.get('sortBy');
+    const sortOrderRaw = searchParams.get('sortOrder');
 
     const pageNum = Math.max(1, page);
     const limitNum = Math.min(Math.max(1, limit), 100);
     const offset = (pageNum - 1) * limitNum;
+
+    const sortBy = sortByRaw && EXPENSES_SORT_COLUMNS.includes(sortByRaw as any)
+      ? sortByRaw
+      : 'date';
+    const sortOrder = sortOrderRaw === 'asc' ? 'ASC' : 'DESC';
+
+    const validStatuses = ['paid', 'pending', 'overdue'];
 
     const sqlParams: (string | number)[] = [];
     const conditions: string[] = [];
@@ -44,6 +58,11 @@ export async function GET(request: NextRequest) {
         `(category ILIKE $${paramIndex} OR description ILIKE $${paramIndex} OR vendor ILIKE $${paramIndex})`
       );
       sqlParams.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+    if (status?.trim() && validStatuses.includes(status.trim())) {
+      conditions.push(`status = $${paramIndex}`);
+      sqlParams.push(status.trim());
       paramIndex++;
     }
     if (startDate?.trim()) {
@@ -71,7 +90,7 @@ export async function GET(request: NextRequest) {
              created_at, updated_at
       FROM expenses
       ${whereSql}
-      ORDER BY date DESC, created_at DESC
+      ORDER BY ${sortBy} ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     const expenseRows = await query<IExpenseRow>(expensesSql, [...sqlParams, limitNum, offset]);

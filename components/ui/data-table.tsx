@@ -65,6 +65,8 @@ export interface DataTableProps<TData, TValue> {
   headerTitle?: string;
   headerDescription?: string;
   headerAction?: React.ReactNode;
+  filterSlot?: React.ReactNode;
+  toolbarClassName?: string;
   serverSideSearch?: boolean;
   searchValue?: string;
   onSearchChange?: (value: string) => void;
@@ -78,6 +80,9 @@ export interface DataTableProps<TData, TValue> {
   totalPages?: number;
   onPageChange?: (page: number) => void;
   onLimitChange?: (limit: number) => void;
+  sortBy?: string;
+  sortOrder?: "asc" | "desc";
+  onSortChange?: (sortBy: string, sortOrder: "asc" | "desc") => void;
 }
 
 export function DataTable<TData, TValue>({
@@ -94,6 +99,8 @@ export function DataTable<TData, TValue>({
   headerTitle,
   headerDescription,
   headerAction,
+  filterSlot,
+  toolbarClassName = "",
   serverSideSearch = false,
   searchValue,
   onSearchChange,
@@ -107,6 +114,9 @@ export function DataTable<TData, TValue>({
   totalPages,
   onPageChange,
   onLimitChange,
+  sortBy: sortByProp,
+  sortOrder: sortOrderProp,
+  onSortChange,
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
@@ -133,10 +143,14 @@ export function DataTable<TData, TValue>({
       columnFilters,
       columnVisibility,
       globalFilter: serverSideSearch ? "" : globalFilter,
+      // When using server-side pagination, sync page size to server limit so all returned rows are shown
+      ...(serverSidePagination && limit !== undefined
+        ? { pagination: { pageIndex: 0, pageSize: limit } }
+        : {}),
     },
     initialState: {
       pagination: {
-        pageSize: defaultPageSize,
+        pageSize: serverSidePagination ? (limit ?? defaultPageSize) : defaultPageSize,
       },
     },
   });
@@ -145,7 +159,7 @@ export function DataTable<TData, TValue>({
   const displayHeader =
     header ||
     (headerTitle && (
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0 flex-1">
           <h2 className="text-xl font-semibold tracking-tight sm:text-2xl">
             {headerTitle}
@@ -161,16 +175,16 @@ export function DataTable<TData, TValue>({
     ));
 
   return (
-    <div className="px-4 lg:px-6 space-y-4">
+    <div className="min-w-0 space-y-4 px-2 sm:px-4 lg:px-6">
       <Card>
         {displayHeader && (
-          <div className="px-6 pb-4 border-b">{displayHeader}</div>
+          <div className="border-b px-4 pb-4 sm:px-6">{displayHeader}</div>
         )}
         <CardContent>
           <div className="space-y-4">
             {/* Search */}
-            <div className="flex items-center gap-4">
-              <div className="relative flex-1 w-full">
+            <div className="flex flex-wrap items-center gap-y-2">
+              <div className="relative flex-1 min-w-[200px] w-full">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder={searchPlaceholder}
@@ -183,54 +197,75 @@ export function DataTable<TData, TValue>({
                   className="pl-9"
                 />
               </div>
-              {showAddButton &&
-                (addButtonHref || onAddClick) &&
-                (onAddClick ? (
-                  <Button onClick={onAddClick}>
-                    <Plus className="h-4 w-4 mr-2" />
-                    {addButtonLabel}
-                  </Button>
-                ) : (
-                  <Link href={addButtonHref!}>
-                    <Button>
+              <div className={toolbarClassName}>
+                {filterSlot}
+                {showAddButton &&
+                  (addButtonHref || onAddClick) &&
+                  (onAddClick ? (
+                    <Button onClick={onAddClick} className="w-full lg:col-span-1 col-span-3">
                       <Plus className="h-4 w-4 mr-2" />
                       {addButtonLabel}
                     </Button>
-                  </Link>
-                ))}
+                  ) : (
+                    <Link href={addButtonHref!} className="w-full lg:col-span-1 col-span-3">
+                      <Button className="w-full">
+                        <Plus className="h-4 w-4 mr-2" />
+                        {addButtonLabel}
+                      </Button>
+                    </Link>
+                  ))}
+              </div>
             </div>
 
             {/* Table */}
-            <div className="rounded-md border">
+            <div className="min-w-0 overflow-x-auto rounded-md border">
               <Table>
                 <TableHeader>
                   {table.getHeaderGroups().map((headerGroup) => (
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
+                        const meta = header.column.columnDef.meta as { sortKey?: string } | undefined;
+                        const sortKey = meta?.sortKey;
+                        const isServerSortable = !!onSortChange && !!sortKey;
+                        const isSortedByThis = sortByProp === sortKey;
+                        const handleHeaderClick = isServerSortable
+                          ? () => {
+                            const nextOrder: "asc" | "desc" =
+                              isSortedByThis && sortOrderProp === "desc" ? "asc" : "desc";
+                            onSortChange(sortKey, nextOrder);
+                          }
+                          : header.column.getToggleSortingHandler();
+                        const canSort = isServerSortable || header.column.getCanSort();
+                        const sortIndicator =
+                          isServerSortable && isSortedByThis
+                            ? sortOrderProp
+                            : !isServerSortable && header.column.getIsSorted()
+                              ? header.column.getIsSorted()
+                              : null;
+
                         return (
                           <TableHead key={header.id}>
                             {header.isPlaceholder ? null : (
                               <div
                                 className={
-                                  header.column.getCanSort()
+                                  canSort
                                     ? "cursor-pointer select-none flex items-center gap-2"
                                     : ""
                                 }
-                                onClick={header.column.getToggleSortingHandler()}
+                                onClick={handleHeaderClick}
                               >
                                 {flexRender(
                                   header.column.columnDef.header,
                                   header.getContext()
                                 )}
-                                {header.column.getCanSort() && (
+                                {canSort && (
                                   <ChevronDown
-                                    className={`h-4 w-4 transition-transform ${
-                                      header.column.getIsSorted() === "asc"
+                                    className={`h-4 w-4 transition-transform ${sortIndicator === "asc"
                                         ? "rotate-180"
-                                        : header.column.getIsSorted() === "desc"
-                                        ? ""
-                                        : "opacity-0"
-                                    }`}
+                                        : sortIndicator === "desc"
+                                          ? ""
+                                          : "opacity-0"
+                                      }`}
                                   />
                                 )}
                               </div>
@@ -278,14 +313,20 @@ export function DataTable<TData, TValue>({
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
                       >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
+                        {row.getVisibleCells().map((cell) => {
+                          const cellMeta = cell.column.columnDef.meta as { cellClassName?: string } | undefined;
+                          return (
+                            <TableCell
+                              key={cell.id}
+                              className={cellMeta?.cellClassName}
+                            >
+                              {flexRender(
+                                cell.column.columnDef.cell,
+                                cell.getContext()
+                              )}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))
                   ) : (
@@ -303,31 +344,29 @@ export function DataTable<TData, TValue>({
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
+            <div className="flex flex-col gap-4 xl:flex-row items-center xl:justify-between">
+              <div className="min-w-0 flex-1">
                 <p className="text-sm text-muted-foreground">
                   {serverSidePagination && total !== undefined
                     ? `Showing ${total === 0 ? 0 : (page ?? 1) * (limit ?? 10) - (limit ?? 10) + 1} to ${Math.min((page ?? 1) * (limit ?? 10), total)} of ${total} ${entityName}(s)`
-                    : `Showing ${
-                        table.getFilteredRowModel().rows.length === 0
-                          ? 0
-                          : table.getState().pagination.pageIndex *
-                              table.getState().pagination.pageSize +
-                            1
-                      } to ${
-                        table.getFilteredRowModel().rows.length === 0
-                          ? 0
-                          : Math.min(
-                              (table.getState().pagination.pageIndex + 1) *
-                                table.getState().pagination.pageSize,
-                              table.getFilteredRowModel().rows.length
-                            )
-                      } of ${table.getFilteredRowModel().rows.length} ${entityName}(s)`}
+                    : `Showing ${table.getFilteredRowModel().rows.length === 0
+                      ? 0
+                      : table.getState().pagination.pageIndex *
+                      table.getState().pagination.pageSize +
+                      1
+                    } to ${table.getFilteredRowModel().rows.length === 0
+                      ? 0
+                      : Math.min(
+                        (table.getState().pagination.pageIndex + 1) *
+                        table.getState().pagination.pageSize,
+                        table.getFilteredRowModel().rows.length
+                      )
+                    } of ${table.getFilteredRowModel().rows.length} ${entityName}(s)`}
                 </p>
               </div>
-              <div className="flex items-center gap-6">
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium">Rows per page</p>
+              <div className="flex flex-wrap w-full lg:w-fit items-center gap-4 sm:gap-6">
+                <div className="flex items-center w-full lg:w-fit justify-center gap-2">
+                  <p className="shrink-0 text-sm font-medium">Rows per page</p>
                   <Select
                     value={`${serverSidePagination ? limit ?? defaultPageSize : table.getState().pagination.pageSize}`}
                     onValueChange={(value) => {
@@ -351,7 +390,7 @@ export function DataTable<TData, TValue>({
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="flex items-center gap-2">
+                <div className="flex items-center w-full lg:w-fit justify-center gap-2">
                   <div className="flex items-center justify-center text-sm font-medium">
                     Page{" "}
                     {serverSidePagination

@@ -11,7 +11,9 @@ export type ExpiringMemberRow = {
   expiry_date: string;
 };
 
-/** GET /api/members/expiring - Get members whose expiry_date is in the given month/year. Query: month (0-11), year */
+const EXPIRING_SORT_COLUMNS = ['name', 'email', 'phone', 'membership_type', 'expiry_date', 'days_remaining'] as const;
+
+/** GET /api/members/expiring - Get members whose expiry_date is in the given month/year. Query: month (0-11), year, sortBy, sortOrder */
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
   if (auth.error) return auth.error;
@@ -20,6 +22,8 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const monthParam = searchParams.get('month');
     const yearParam = searchParams.get('year');
+    const sortByRaw = searchParams.get('sortBy');
+    const sortOrderRaw = searchParams.get('sortOrder');
 
     const now = new Date();
     const month = monthParam != null ? parseInt(monthParam, 10) : now.getMonth();
@@ -38,8 +42,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const sortBy = sortByRaw && EXPIRING_SORT_COLUMNS.includes(sortByRaw as any)
+      ? sortByRaw
+      : 'expiry_date';
+    const sortOrder = sortOrderRaw === 'desc' ? 'desc' : 'asc';
+
     // SQL months are 1-12
     const sqlMonth = month + 1;
+
+    const orderBySql =
+      sortBy === 'days_remaining'
+        ? 'expiry_date ASC'
+        : `${sortBy} ${sortOrder === 'asc' ? 'ASC' : 'DESC'}`;
 
     const rows = await query<ExpiringMemberRow>(
       `SELECT member_id, name, email, phone, membership_type, expiry_date
@@ -48,13 +62,13 @@ export async function GET(request: NextRequest) {
          AND expiry_date IS NOT NULL
          AND EXTRACT(MONTH FROM expiry_date) = $1
          AND EXTRACT(YEAR FROM expiry_date) = $2
-       ORDER BY expiry_date ASC`,
+       ORDER BY ${orderBySql}`,
       [sqlMonth, year]
     );
 
     const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
 
-    const members = rows.map((row) => {
+    let members = rows.map((row) => {
       const expiryDate = row.expiry_date as string | Date;
       const expiryDateStr =
         expiryDate instanceof Date
@@ -75,6 +89,14 @@ export async function GET(request: NextRequest) {
         daysRemaining,
       };
     });
+
+    if (sortBy === 'days_remaining') {
+      members = [...members].sort((a, b) =>
+        sortOrder === 'asc'
+          ? a.daysRemaining - b.daysRemaining
+          : b.daysRemaining - a.daysRemaining
+      );
+    }
 
     return NextResponse.json({
       success: true,

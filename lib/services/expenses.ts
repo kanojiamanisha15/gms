@@ -31,13 +31,16 @@ type ExpenseByIdResponse = {
   error?: string;
 };
 
-// GET /api/expenses - Get expenses with pagination, search, date range
+// GET /api/expenses - Get expenses with pagination, search, date range, sorting
 export const doGetExpenses = async (params?: {
   search?: string;
+  status?: string;
   page?: number;
   limit?: number;
   startDate?: string;
   endDate?: string;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<{
   expenses: IExpenseData[];
   page: number;
@@ -55,8 +58,11 @@ export const doGetExpenses = async (params?: {
     limit: limit.toString(),
   };
   if (params?.search?.trim()) queryParams.search = params.search.trim();
+  if (params?.status?.trim()) queryParams.status = params.status.trim();
   if (params?.startDate?.trim()) queryParams.startDate = params.startDate.trim();
   if (params?.endDate?.trim()) queryParams.endDate = params.endDate.trim();
+  if (params?.sortBy) queryParams.sortBy = params.sortBy;
+  if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
 
   const response = await getRequest<ExpensesListResponse>(
     API_ENDPOINTS.EXPENSES,

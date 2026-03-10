@@ -29,6 +29,7 @@ import {
   useCreateMembershipPlan,
   useUpdateMembershipPlan,
 } from "@/hooks/use-membership-plans";
+import { LoadingState } from "@/components/ui/loading-state";
 
 type MembershipPlanFormData = {
   name: string;
@@ -134,7 +135,9 @@ export default function AddMembershipPlanPage() {
       }
     >
       <div className="px-4 lg:px-6 space-y-4">
-        {showLoading ? <div>Loading...</div>:
+        {showLoading ? (
+          <LoadingState message="Loading plan..." className="py-12" />
+        ) :
         showError ? (
           <Card>
             <CardContent className="pt-6">
@@ -170,7 +173,7 @@ export default function AddMembershipPlanPage() {
                   onSubmit={form.handleSubmit(onSubmit)}
                   className="space-y-6"
                 >
-                  <div className="grid gap-6 md:grid-cols-2">
+                  <div className="grid gap-6 lg:grid-cols-2">
                     <FormField
                       control={form.control}
                       name="name"

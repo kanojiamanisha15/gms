@@ -36,6 +36,7 @@ const columns: ColumnDef<ExpiringMember>[] = [
   {
     accessorKey: "name",
     header: "Member Name",
+    meta: { sortKey: "name" },
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("name")}</div>
     ),
@@ -43,6 +44,7 @@ const columns: ColumnDef<ExpiringMember>[] = [
   {
     accessorKey: "email",
     header: "Email",
+    meta: { sortKey: "email" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("email")}</div>
     ),
@@ -50,6 +52,7 @@ const columns: ColumnDef<ExpiringMember>[] = [
   {
     accessorKey: "phone",
     header: "Phone",
+    meta: { sortKey: "phone" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("phone")}</div>
     ),
@@ -57,6 +60,7 @@ const columns: ColumnDef<ExpiringMember>[] = [
   {
     accessorKey: "membershipType",
     header: "Membership Type",
+    meta: { sortKey: "membership_type" },
     cell: ({ row }) => (
       <div className="capitalize">{row.getValue("membershipType")}</div>
     ),
@@ -64,6 +68,7 @@ const columns: ColumnDef<ExpiringMember>[] = [
   {
     accessorKey: "expirationDate",
     header: "Expiration Date",
+    meta: { sortKey: "expiry_date" },
     cell: ({ row }) => {
       const date = new Date(row.getValue("expirationDate"));
       return <div>{date.toLocaleDateString()}</div>;
@@ -72,6 +77,7 @@ const columns: ColumnDef<ExpiringMember>[] = [
   {
     accessorKey: "daysRemaining",
     header: "Days Remaining",
+    meta: { sortKey: "days_remaining" },
     cell: ({ row }) => {
       const days = row.getValue("daysRemaining") as number;
       const variant =
@@ -103,11 +109,19 @@ const YEAR_OPTIONS = Array.from({ length: 5 }, (_, i) => currentDate.getFullYear
 export default function Page() {
   const [selectedMonth, setSelectedMonth] = React.useState(String(currentDate.getMonth()));
   const [selectedYear, setSelectedYear] = React.useState(String(currentDate.getFullYear()));
+  const [sortBy, setSortBy] = React.useState("expiry_date");
+  const [sortOrder, setSortOrder] = React.useState<"asc" | "desc">("asc");
 
   const { data: expiringMembers = [], isLoading, isError, error } = useExpiringMembers(
     Number(selectedMonth),
-    Number(selectedYear)
+    Number(selectedYear),
+    { sortBy, sortOrder }
   );
+
+  const handleSortChange = React.useCallback((newSortBy: string, newSortOrder: "asc" | "desc") => {
+    setSortBy(newSortBy);
+    setSortOrder(newSortOrder);
+  }, []);
 
   const monthYearLabel = `${MONTH_NAMES[Number(selectedMonth)]} ${selectedYear}`;
 
@@ -127,6 +141,9 @@ export default function Page() {
             isLoading={isLoading}
             isError={isError}
             error={error}
+            sortBy={sortBy}
+            sortOrder={sortOrder}
+            onSortChange={handleSortChange}
             headerTitle="Members with Plans Expiring by Month"
             headerDescription={`${expiringMembers.length} member${
               expiringMembers.length !== 1 ? "s" : ""

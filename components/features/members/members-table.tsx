@@ -5,13 +5,33 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { EditButton } from "@/components/ui/edit-button";
 import { DeleteButton } from "@/components/ui/delete-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useQuery, useQueryClient, useMutation } from "@tanstack/react-query";
 import { doGetMembers, doDeleteMember } from "@/lib/services/members";
 import { useDebounce } from "@/hooks/use-debounce";
+import { useAllMembershipPlans } from "@/hooks/use-membership-plans";
 import { useAppSelector, useMembersTableActions } from "@/lib/store";
 import { toast } from "sonner";
-import { calculateExpirationDate } from "@/lib/helpers";
 import type { IMemberData } from "@/types";
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+  { value: "expired", label: "Expired" },
+] as const;
+
+const PAYMENT_STATUS_OPTIONS = [
+  { value: "all", label: "All Payment" },
+  { value: "paid", label: "Paid" },
+  { value: "unpaid", label: "Unpaid" },
+] as const;
 
 function ActionsCell({ member }: { member: IMemberData }) {
   const queryClient = useQueryClient();
@@ -64,6 +84,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "memberId",
     header: "Member ID",
+    meta: { sortKey: "member_id" },
     cell: ({ row }) => (
       <div className="font-mono font-medium">{row.getValue("memberId")}</div>
     ),
@@ -71,6 +92,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "name",
     header: "Name",
+    meta: { sortKey: "name" },
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("name")}</div>
     ),
@@ -78,6 +100,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "email",
     header: "Email",
+    meta: { sortKey: "email" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("email")}</div>
     ),
@@ -85,6 +108,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "phone",
     header: "Phone",
+    meta: { sortKey: "phone" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("phone")}</div>
     ),
@@ -92,6 +116,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "membershipType",
     header: "Membership Type",
+    meta: { sortKey: "membership_type" },
     cell: ({ row }) => (
       <div className="capitalize">{row.getValue("membershipType")}</div>
     ),
@@ -99,6 +124,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "joinDate",
     header: "Join Date",
+    meta: { sortKey: "join_date" },
     cell: ({ row }) => {
       const date = new Date(row.getValue("joinDate"));
       return <div>{date.toLocaleDateString()}</div>;
@@ -107,6 +133,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "expiryDate",
     header: "Expiry Date",
+    meta: { sortKey: "expiry_date" },
     cell: ({ row }) => {
       const date = new Date(row.getValue("expiryDate"));
       const today = new Date();
@@ -139,6 +166,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "status",
     header: "Status",
+    meta: { sortKey: "status" },
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       const statusConfig: Record<
@@ -160,6 +188,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "paymentStatus",
     header: "Payment Status",
+    meta: { sortKey: "payment_status" },
     cell: ({ row }) => {
       const paymentStatus = row.getValue("paymentStatus") as string;
       const statusConfig: Record<
@@ -180,6 +209,7 @@ const columns: ColumnDef<IMemberData>[] = [
   {
     accessorKey: "paymentAmount",
     header: "Payment Amount",
+    meta: { sortKey: "payment_amount" },
     cell: ({ row }) => {
       const amount = parseFloat(row.getValue("paymentAmount"));
       return (
@@ -205,28 +235,125 @@ const columns: ColumnDef<IMemberData>[] = [
 ];
 
 export function MembersTable() {
-  const { setSearchInput, setPage, setLimit } = useMembersTableActions();
+  const {
+    setSearchInput,
+    setStatus,
+    setPaymentStatus,
+    setMembershipType,
+    setPage,
+    setLimit,
+    setSort,
+  } = useMembersTableActions();
   const searchInput = useAppSelector((s) => s.membersTable.searchInput);
+  const status = useAppSelector((s) => s.membersTable.status);
+  const paymentStatus = useAppSelector((s) => s.membersTable.paymentStatus);
+  const membershipType = useAppSelector((s) => s.membersTable.membershipType);
   const page = useAppSelector((s) => s.membersTable.page);
   const limit = useAppSelector((s) => s.membersTable.limit);
+  const sortBy = useAppSelector((s) => s.membersTable.sortBy);
+  const sortOrder = useAppSelector((s) => s.membersTable.sortOrder);
   const debouncedSearch = useDebounce(searchInput, 300);
+  const { data: plansData } = useAllMembershipPlans();
+  const plans = plansData?.plans ?? [];
+
+  const membershipTypeOptions = [
+    { value: "all", label: "All Types" },
+    ...plans
+      .filter((p) => p.status === "active")
+      .map((p) => ({ value: p.name, label: p.name })),
+  ];
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["members", debouncedSearch, page, limit],
+    queryKey: [
+      "members",
+      debouncedSearch,
+      status,
+      paymentStatus,
+      membershipType,
+      page,
+      limit,
+      sortBy,
+      sortOrder,
+    ],
     queryFn: () =>
       doGetMembers({
         search: debouncedSearch || undefined,
+        status: status || undefined,
+        paymentStatus: paymentStatus || undefined,
+        membershipType: membershipType || undefined,
         page,
         limit,
+        sortBy,
+        sortOrder,
       }),
   });
   const members: IMemberData[] = data?.members ?? [];
+
+  const filterSlot = (
+    <>
+      <Select
+        value={status || STATUS_OPTIONS[0].value}
+        onValueChange={(v) => setStatus(v === STATUS_OPTIONS[0].value ? "" : v)}
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue
+            placeholder="Status"
+            labels={Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.label]))}
+          />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {STATUS_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={paymentStatus || PAYMENT_STATUS_OPTIONS[0].value}
+        onValueChange={(v) => setPaymentStatus(v === PAYMENT_STATUS_OPTIONS[0].value ? "" : v)}
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue
+            placeholder="Payment Status"
+            labels={Object.fromEntries(PAYMENT_STATUS_OPTIONS.map((o) => [o.value, o.label]))}
+          />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {PAYMENT_STATUS_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={membershipType || "all"}
+        onValueChange={(v) => setMembershipType(v === "all" ? "" : v)}
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue
+            placeholder="Membership Type"
+            labels={Object.fromEntries(membershipTypeOptions.map((o) => [o.value, o.label]))}
+          />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {membershipTypeOptions.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
 
   return (
     <DataTable
       columns={columns}
       data={members}
       searchPlaceholder="Search by name, email, or member ID..."
+      filterSlot={filterSlot}
       addButtonLabel="Add Member"
       addButtonHref="/members/add-member"
       entityName="member"
@@ -243,6 +370,10 @@ export function MembersTable() {
       totalPages={data?.totalPages}
       onPageChange={setPage}
       onLimitChange={setLimit}
+      sortBy={sortBy}
+      sortOrder={sortOrder}
+      onSortChange={setSort}
+      toolbarClassName="grid sm:grid-cols-3 lg:grid-cols-4 gap-2 items-center w-full"
     />
   );
 }

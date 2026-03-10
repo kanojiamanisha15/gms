@@ -23,7 +23,13 @@ function mapMemberRowToResponse(row: IMemberRow): IMemberData {
   };
 }
 
-/** GET /api/members - Return paginated list of members (requires auth). Query: page, limit, search */
+const MEMBERS_SORT_COLUMNS = [
+  'member_id', 'name', 'email', 'phone', 'membership_type',
+  'join_date', 'expiry_date', 'status', 'payment_status', 'payment_amount',
+  'created_at', 'updated_at',
+] as const;
+
+/** GET /api/members - Return paginated list of members (requires auth). Query: page, limit, search, sortBy, sortOrder */
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
   if (auth.error) return auth.error;
@@ -31,12 +37,25 @@ export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
     const search = searchParams.get('search');
+    const status = searchParams.get('status');
+    const paymentStatus = searchParams.get('paymentStatus');
+    const membershipType = searchParams.get('membershipType');
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const limit = parseInt(searchParams.get('limit') ?? '10', 10);
+    const sortByRaw = searchParams.get('sortBy');
+    const sortOrderRaw = searchParams.get('sortOrder');
 
     const pageNum = Math.max(1, page);
     const limitNum = Math.min(Math.max(1, limit), 100);
     const offset = (pageNum - 1) * limitNum;
+
+    const sortBy = sortByRaw && MEMBERS_SORT_COLUMNS.includes(sortByRaw as any)
+      ? sortByRaw
+      : 'created_at';
+    const sortOrder = sortOrderRaw === 'asc' ? 'ASC' : 'DESC';
+
+    const validStatuses = ['active', 'inactive', 'expired'];
+    const validPaymentStatuses = ['paid', 'unpaid'];
 
     const sqlParams: (string | number)[] = [];
     const conditions: string[] = [];
@@ -47,6 +66,24 @@ export async function GET(request: NextRequest) {
         `(name ILIKE $${paramIndex} OR email ILIKE $${paramIndex} OR member_id ILIKE $${paramIndex})`
       );
       sqlParams.push(`%${search.trim()}%`);
+      paramIndex++;
+    }
+
+    if (status?.trim() && validStatuses.includes(status.trim())) {
+      conditions.push(`status = $${paramIndex}`);
+      sqlParams.push(status.trim());
+      paramIndex++;
+    }
+
+    if (paymentStatus?.trim() && validPaymentStatuses.includes(paymentStatus.trim())) {
+      conditions.push(`payment_status = $${paramIndex}`);
+      sqlParams.push(paymentStatus.trim());
+      paramIndex++;
+    }
+
+    if (membershipType?.trim()) {
+      conditions.push(`membership_type = $${paramIndex}`);
+      sqlParams.push(membershipType.trim());
       paramIndex++;
     }
 
@@ -65,7 +102,7 @@ export async function GET(request: NextRequest) {
              created_at, updated_at
       FROM members
       ${whereSql}
-      ORDER BY created_at DESC
+      ORDER BY ${sortBy} ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     const memberRows = await query<IMemberRow>(membersSql, [...sqlParams, limitNum, offset]);

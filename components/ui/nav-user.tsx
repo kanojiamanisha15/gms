@@ -46,11 +46,10 @@ export function NavUser({
     avatar: string;
   };
 }) {
-  const { isMobile, setOpenMobile, setOpen } = useSidebar();
+  const { isMobile, setOpenMobile } = useSidebar();
 
-  const closeSidebar = () => {
+  const closeSidebarAndDropdown = () => {
     if (isMobile) setOpenMobile(false);
-    else setOpen(false);
   };
   const {
     mutate: logout,
@@ -107,18 +106,18 @@ export function NavUser({
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup className="flex flex-col gap-2 p-2 text-sm">
-              <button onClick={closeSidebar}>
+              <DropdownMenuItem asChild onClick={closeSidebarAndDropdown}>
                 <Link href="/account" className="flex items-center gap-2">
                   <UserCircle className="!size-4"/>
                   Account
                 </Link>
-              </button>
-              <button onClick={closeSidebar}>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild onClick={closeSidebarAndDropdown}>
                 <Link href="/notifications" className="flex items-center gap-2">
                   <BellRing className="!size-4"/>
                   Notifications
                 </Link>
-              </button>
+              </DropdownMenuItem>
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem

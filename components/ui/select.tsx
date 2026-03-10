@@ -20,11 +20,15 @@ function Select({
   value,
   defaultValue,
   onValueChange,
+  width,
+  style,
+  className,
   ...props
 }: React.HTMLAttributes<HTMLDivElement> & {
   value?: string;
   defaultValue?: string;
   onValueChange?: (value: string) => void;
+  width?: string | number;
 }) {
   const [internalValue, setInternalValue] = React.useState(defaultValue || "");
   const [open, setOpen] = React.useState(false);
@@ -49,7 +53,12 @@ function Select({
         triggerRef,
       }}
     >
-      <div data-slot="select" {...props}>
+      <div
+        data-slot="select"
+        {...props}
+        className={className}
+        style={{ ...style, ...(width !== undefined && { width }) }}
+      >
         {children}
       </div>
     </SelectContext.Provider>
@@ -110,7 +119,7 @@ function SelectTrigger({
       data-size={size}
       onClick={() => context.setOpen(!context.open)}
       className={cn(
-        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-fit items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+        "border-input data-[placeholder]:text-muted-foreground [&_svg:not([class*='text-'])]:text-muted-foreground focus-visible:border-ring focus-visible:ring-ring/50 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive dark:bg-input/30 dark:hover:bg-input/50 flex w-full items-center justify-between gap-2 rounded-md border bg-transparent px-3 py-2 text-sm whitespace-nowrap shadow-xs transition-[color,box-shadow] outline-none focus-visible:ring-[3px] disabled:cursor-not-allowed disabled:opacity-50 data-[size=default]:h-9 data-[size=sm]:h-8 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
         className
       )}
       {...props}

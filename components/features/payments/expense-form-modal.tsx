@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { DateInput } from "@/components/ui/date-input";
 import {
   Select,
   SelectContent,
@@ -28,7 +29,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import type { IExpenseData } from "@/types";
-import { formatDateForInput } from "@/lib/helpers";
+import { formatDateForInput, getTodayLocal } from "@/lib/helpers";
 
 type ExpenseFormData = {
   category: string;
@@ -79,7 +80,7 @@ export function ExpenseFormModal({
       category: "",
       description: "",
       amount: 0,
-      date: new Date().toISOString().split("T")[0],
+      date: getTodayLocal(),
       status: "pending",
       vendor: "",
     },
@@ -100,7 +101,7 @@ export function ExpenseFormModal({
         category: "",
         description: "",
         amount: 0,
-        date: new Date().toISOString().split("T")[0],
+        date: getTodayLocal(),
         status: "pending",
         vendor: "",
       });
@@ -207,8 +208,7 @@ export function ExpenseFormModal({
                   <FormItem>
                     <FormLabel>Date</FormLabel>
                     <FormControl>
-                      <Input
-                        type="date"
+                      <DateInput
                         {...field}
                         value={formatDateForInput(field.value) || ""}
                         onChange={(e) => field.onChange(e.target.value)}

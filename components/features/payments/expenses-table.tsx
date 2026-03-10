@@ -7,8 +7,14 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { DeleteButton } from "@/components/ui/delete-button";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
+import { DateInput } from "@/components/ui/date-input";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Pencil } from "lucide-react";
 import dayjs from "dayjs";
 import { useQuery } from "@tanstack/react-query";
@@ -22,6 +28,13 @@ import type { IExpenseData } from "@/types";
 const ExpenseFormModal = dynamic(() => import("./expense-form-modal").then(mod => ({ default: mod.ExpenseFormModal })), {
   ssr: false,
 });
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "paid", label: "Paid" },
+  { value: "pending", label: "Pending" },
+  { value: "overdue", label: "Overdue" },
+] as const;
 
 const categoryLabels: Record<string, string> = {
   equipment: "Equipment",
@@ -80,28 +93,35 @@ export function ExpensesTable() {
 
   const {
     setSearchInput,
+    setStatus,
     setPage,
     setLimit,
     setStartDate,
     setEndDate,
-    clearDateRange,
+    setSort,
   } = useExpensesTableActions();
   const searchInput = useAppSelector((s) => s.expensesTable.searchInput);
+  const status = useAppSelector((s) => s.expensesTable.status);
   const page = useAppSelector((s) => s.expensesTable.page);
   const limit = useAppSelector((s) => s.expensesTable.limit);
   const startDate = useAppSelector((s) => s.expensesTable.startDate);
   const endDate = useAppSelector((s) => s.expensesTable.endDate);
+  const sortBy = useAppSelector((s) => s.expensesTable.sortBy);
+  const sortOrder = useAppSelector((s) => s.expensesTable.sortOrder);
   const debouncedSearch = useDebounce(searchInput, 300);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["expenses", debouncedSearch, page, limit, startDate, endDate],
+    queryKey: ["expenses", debouncedSearch, status, page, limit, startDate, endDate, sortBy, sortOrder],
     queryFn: () =>
       doGetExpenses({
         search: debouncedSearch || undefined,
+        status: status || undefined,
         page,
         limit,
         startDate: startDate || undefined,
         endDate: endDate || undefined,
+        sortBy,
+        sortOrder,
       }),
   });
 
@@ -150,6 +170,7 @@ export function ExpensesTable() {
     {
       accessorKey: "category",
       header: "Category",
+      meta: { sortKey: "category" },
       cell: ({ row }) => (
         <div className="font-medium">
           {categoryLabels[row.getValue("category") as string] ||
@@ -160,6 +181,7 @@ export function ExpensesTable() {
     {
       accessorKey: "description",
       header: "Description",
+      meta: { sortKey: "description" },
       cell: ({ row }) => (
         <div className="max-w-md">{row.getValue("description") ?? "—"}</div>
       ),
@@ -167,6 +189,7 @@ export function ExpensesTable() {
     {
       accessorKey: "vendor",
       header: "Vendor",
+      meta: { sortKey: "vendor" },
       cell: ({ row }) => {
         const vendor = row.getValue("vendor") as string | null | undefined;
         return <div className="text-muted-foreground">{vendor ?? "N/A"}</div>;
@@ -175,6 +198,7 @@ export function ExpensesTable() {
     {
       accessorKey: "amount",
       header: "Amount",
+      meta: { sortKey: "amount" },
       cell: ({ row }) => {
         const amount = parseFloat(String(row.getValue("amount")));
         return (
@@ -191,6 +215,7 @@ export function ExpensesTable() {
     {
       accessorKey: "date",
       header: "Date",
+      meta: { sortKey: "date" },
       cell: ({ row }) => {
         const date = dayjs(row.getValue("date"));
         return <div>{date.format("MM/DD/YYYY")}</div>;
@@ -199,6 +224,7 @@ export function ExpensesTable() {
     {
       accessorKey: "status",
       header: "Status",
+      meta: { sortKey: "status" },
       cell: ({ row }) => {
         const status = row.getValue("status") as string;
         const statusConfig: Record<
@@ -229,36 +255,45 @@ export function ExpensesTable() {
   ];
 
   const headerAction = (
-    <div className="flex items-center gap-3">
-      <div className="flex items-center gap-2">
-        <Label htmlFor="start-date" className="text-xs whitespace-nowrap">
-          Start Date
-        </Label>
-        <Input
-          id="start-date"
-          type="date"
-          value={startDate}
-          onChange={(e) => setStartDate(e.target.value)}
-          className="w-[140px]"
-        />
-      </div>
-      <div className="flex items-center gap-2">
-        <Label htmlFor="end-date" className="text-xs whitespace-nowrap">
-          End Date
-        </Label>
-        <Input
-          id="end-date"
-          type="date"
-          value={endDate}
-          onChange={(e) => setEndDate(e.target.value)}
-          className="w-[140px]"
-        />
-      </div>
-      {(startDate || endDate) && (
-        <Button variant="outline" size="sm" onClick={clearDateRange}>
-          Clear
-        </Button>
-      )}
+    <div className="flex flex-wrap items-center gap-3 sm:flex-nowrap">
+      <DateInput
+        label="Start Date"
+        id="start-date"
+        value={startDate}
+        onChange={(e) => setStartDate(e.target.value)}
+        className="w-[140px]"
+      />
+      <DateInput
+        label="End Date"
+        id="end-date"
+        value={endDate}
+        onChange={(e) => setEndDate(e.target.value)}
+        className="w-[140px]"
+      />
+    </div>
+  );
+
+  const filterSlot = (
+    <div className="flex w-full flex-wrap items-center gap-2">
+      <Select
+        value={status || STATUS_OPTIONS[0].value}
+        onValueChange={(v) => setStatus(v === STATUS_OPTIONS[0].value ? "" : v)}
+        className="w-full"
+      >
+        <SelectTrigger className="h-9 w-full">
+          <SelectValue
+            placeholder="Status"
+            labels={Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.label]))}
+          />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {STATUS_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
     </div>
   );
 
@@ -268,6 +303,7 @@ export function ExpensesTable() {
         columns={columns}
         data={expenses}
         searchPlaceholder="Search expenses..."
+        filterSlot={filterSlot}
         addButtonLabel="Add Expense"
         entityName="expense"
         onAddClick={handleAdd}
@@ -287,6 +323,10 @@ export function ExpensesTable() {
         totalPages={data?.totalPages}
         onPageChange={setPage}
         onLimitChange={setLimit}
+        sortBy={sortBy}
+        sortOrder={sortOrder}
+        onSortChange={setSort}
+        toolbarClassName="grid grid-cols-1 lg:grid-cols-2 gap-y-2 lg:gap-x-2 items-center w-full"
       />
       <ExpenseFormModal
         open={isModalOpen}

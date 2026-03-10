@@ -17,7 +17,11 @@ function mapPlanRowToResponse(row: IMembershipPlanRow): IMembershipPlanData {
   };
 }
 
-/** GET /api/membership-plans - Return paginated list of plans (requires auth). Query: page, limit, search */
+const PLANS_SORT_COLUMNS = [
+  'name', 'price', 'duration_days', 'features', 'status', 'created_at', 'updated_at',
+] as const;
+
+/** GET /api/membership-plans - Return paginated list of plans (requires auth). Query: page, limit, search, sortBy, sortOrder */
 export async function GET(request: NextRequest) {
   const auth = requireAuth(request);
   if (auth.error) return auth.error;
@@ -27,10 +31,17 @@ export async function GET(request: NextRequest) {
     const search = searchParams.get('search');
     const page = parseInt(searchParams.get('page') ?? '1', 10);
     const limit = parseInt(searchParams.get('limit') ?? '10', 10);
+    const sortByRaw = searchParams.get('sortBy');
+    const sortOrderRaw = searchParams.get('sortOrder');
 
     const pageNum = Math.max(1, page);
     const limitNum = Math.min(Math.max(1, limit), 100);
     const offset = (pageNum - 1) * limitNum;
+
+    const sortBy = sortByRaw && PLANS_SORT_COLUMNS.includes(sortByRaw as any)
+      ? sortByRaw
+      : 'created_at';
+    const sortOrder = sortOrderRaw === 'asc' ? 'ASC' : 'DESC';
 
     const sqlParams: (string | number)[] = [];
     const conditions: string[] = [];
@@ -58,7 +69,7 @@ export async function GET(request: NextRequest) {
              created_at, updated_at
       FROM membership_plans
       ${whereSql}
-      ORDER BY created_at DESC
+      ORDER BY ${sortBy} ${sortOrder}
       LIMIT $${paramIndex} OFFSET $${paramIndex + 1}
     `;
     const planRows = await query<IMembershipPlanRow>(plansSql, [...sqlParams, limitNum, offset]);

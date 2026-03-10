@@ -162,8 +162,17 @@ function DropdownMenuContent({
       }
     };
 
+    const handleScroll = () => {
+      context.setOpen(false);
+    };
+
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    window.addEventListener("scroll", handleScroll, true);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      window.removeEventListener("scroll", handleScroll, true);
+    };
   }, [context.open]);
 
   if (!context.open) return null;
@@ -219,11 +228,12 @@ function DropdownMenuItem({
   const context = React.useContext(DropdownMenuContext);
 
   const handleClick = (e: React.MouseEvent) => {
-    props.onClick?.(e as React.MouseEvent<HTMLDivElement>);
     context?.setOpen(false);
+    props.onClick?.(e as React.MouseEvent<HTMLDivElement>);
   };
 
   const itemProps = {
+    ...props,
     "data-slot": "dropdown-menu-item",
     "data-inset": inset,
     "data-variant": variant,
@@ -233,7 +243,6 @@ function DropdownMenuItem({
       className
     ),
     onClick: handleClick,
-    ...props,
   };
 
   if (asChild && React.isValidElement(children)) {

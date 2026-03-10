@@ -5,12 +5,31 @@ import { Badge } from "@/components/ui/badge";
 import { DataTable } from "@/components/ui/data-table";
 import { EditButton } from "@/components/ui/edit-button";
 import { DeleteButton } from "@/components/ui/delete-button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { doGetTrainers, doDeleteTrainer } from "@/lib/services/trainers";
 import { useDebounce } from "@/hooks/use-debounce";
 import { useAppSelector, useTrainersTableActions } from "@/lib/store";
 import { toast } from "sonner";
 import type { ITrainerData } from "@/types";
+
+const STATUS_OPTIONS = [
+  { value: "all", label: "All Status" },
+  { value: "active", label: "Active" },
+  { value: "inactive", label: "Inactive" },
+] as const;
+
+const ROLE_OPTIONS = [
+  { value: "all", label: "All Roles" },
+  { value: "Trainer", label: "Trainer" },
+  { value: "Staff", label: "Staff" },
+] as const;
 
 function ActionsCell({ trainer }: { trainer: ITrainerData }) {
   const queryClient = useQueryClient();
@@ -59,6 +78,7 @@ const columns: ColumnDef<ITrainerData>[] = [
   {
     accessorKey: "name",
     header: "Name",
+    meta: { sortKey: "name" },
     cell: ({ row }) => (
       <div className="font-medium">{row.getValue("name")}</div>
     ),
@@ -66,6 +86,7 @@ const columns: ColumnDef<ITrainerData>[] = [
   {
     accessorKey: "email",
     header: "Email",
+    meta: { sortKey: "email" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("email")}</div>
     ),
@@ -73,6 +94,7 @@ const columns: ColumnDef<ITrainerData>[] = [
   {
     accessorKey: "phone",
     header: "Phone",
+    meta: { sortKey: "phone" },
     cell: ({ row }) => (
       <div className="text-muted-foreground">{row.getValue("phone")}</div>
     ),
@@ -80,6 +102,7 @@ const columns: ColumnDef<ITrainerData>[] = [
   {
     accessorKey: "role",
     header: "Role",
+    meta: { sortKey: "role" },
     cell: ({ row }) => {
       const role = row.getValue("role") as string;
       return (
@@ -92,6 +115,7 @@ const columns: ColumnDef<ITrainerData>[] = [
   {
     accessorKey: "hireDate",
     header: "Hire Date",
+    meta: { sortKey: "hire_date" },
     cell: ({ row }) => {
       const date = new Date(row.getValue("hireDate"));
       return <div>{date.toLocaleDateString()}</div>;
@@ -100,6 +124,7 @@ const columns: ColumnDef<ITrainerData>[] = [
   {
     accessorKey: "status",
     header: "Status",
+    meta: { sortKey: "status" },
     cell: ({ row }) => {
       const status = row.getValue("status") as string;
       const statusConfig: Record<
@@ -129,28 +154,80 @@ const columns: ColumnDef<ITrainerData>[] = [
 ];
 
 export function TrainersTable() {
-  const { setSearchInput, setPage, setLimit } = useTrainersTableActions();
+  const { setSearchInput, setStatus, setRole, setPage, setLimit, setSort } = useTrainersTableActions();
   const searchInput = useAppSelector((s) => s.trainersTable.searchInput);
+  const status = useAppSelector((s) => s.trainersTable.status);
+  const role = useAppSelector((s) => s.trainersTable.role);
   const page = useAppSelector((s) => s.trainersTable.page);
   const limit = useAppSelector((s) => s.trainersTable.limit);
+  const sortBy = useAppSelector((s) => s.trainersTable.sortBy);
+  const sortOrder = useAppSelector((s) => s.trainersTable.sortOrder);
   const debouncedSearch = useDebounce(searchInput, 300);
 
   const { data, isLoading, isError, error } = useQuery({
-    queryKey: ["trainers", debouncedSearch, page, limit],
+    queryKey: ["trainers", debouncedSearch, status, role, page, limit, sortBy, sortOrder],
     queryFn: () =>
       doGetTrainers({
         search: debouncedSearch || undefined,
+        status: status || undefined,
+        role: role || undefined,
         page,
         limit,
+        sortBy,
+        sortOrder,
       }),
   });
   const trainers: ITrainerData[] = data?.trainers ?? [];
+
+  const filterSlot = (
+    <>
+      <Select
+        value={status || STATUS_OPTIONS[0].value}
+        onValueChange={(v) => setStatus(v === STATUS_OPTIONS[0].value ? "" : v)}
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue
+            placeholder="Status"
+            labels={Object.fromEntries(STATUS_OPTIONS.map((o) => [o.value, o.label]))}
+          />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {STATUS_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+      <Select
+        value={role || ROLE_OPTIONS[0].value}
+        onValueChange={(v) => setRole(v === ROLE_OPTIONS[0].value ? "" : v)}
+        className="pl-2"
+      >
+        <SelectTrigger className="h-9">
+          <SelectValue
+            placeholder="Role"
+            labels={Object.fromEntries(ROLE_OPTIONS.map((o) => [o.value, o.label]))}
+          />
+        </SelectTrigger>
+        <SelectContent align="start">
+          {ROLE_OPTIONS.map((opt) => (
+            <SelectItem key={opt.value} value={opt.value}>
+              {opt.label}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </>
+  );
 
   return (
     <DataTable
       columns={columns}
       data={trainers}
       searchPlaceholder="Search by name, email, or phone..."
+      toolbarClassName="grid grid-cols-2 lg:grid-cols-3 gap-y-2 lg:gap-x-2 items-center w-full"
+      filterSlot={filterSlot}
       addButtonLabel="Add Trainer/Staff"
       addButtonHref="/trainers-staff/add-trainer"
       entityName="trainer"
@@ -167,6 +244,9 @@ export function TrainersTable() {
       totalPages={data?.totalPages}
       onPageChange={setPage}
       onLimitChange={setLimit}
+      sortBy={sortBy}
+      sortOrder={sortOrder}
+      onSortChange={setSort}
     />
   );
 }

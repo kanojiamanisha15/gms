@@ -31,11 +31,16 @@ type MemberByIdResponse = {
   error?: string;
 };
 
-// GET /api/members - Get all members with pagination
+// GET /api/members - Get all members with pagination and sorting
 export const doGetMembers = async (params?: {
   search?: string;
+  status?: string;
+  paymentStatus?: string;
+  membershipType?: string;
   page?: number;
   limit?: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<{
   members: IMemberData[];
   page: number;
@@ -48,13 +53,20 @@ export const doGetMembers = async (params?: {
   const page = params?.page ?? 1;
   const limit = params?.limit ?? 10;
 
+  const queryParams: Record<string, string> = {
+    page: page.toString(),
+    limit: limit.toString(),
+  };
+  if (params?.search?.trim()) queryParams.search = params.search.trim();
+  if (params?.status?.trim()) queryParams.status = params.status.trim();
+  if (params?.paymentStatus?.trim()) queryParams.paymentStatus = params.paymentStatus.trim();
+  if (params?.membershipType?.trim()) queryParams.membershipType = params.membershipType.trim();
+  if (params?.sortBy) queryParams.sortBy = params.sortBy;
+  if (params?.sortOrder) queryParams.sortOrder = params.sortOrder;
+
   const response = await getRequest<MembersListResponse>(
     API_ENDPOINTS.MEMBERS,
-    {
-      search: params?.search?.trim(),
-      page: page.toString(),
-      limit: limit.toString(),
-    }
+    queryParams
   );
 
   if (!response?.success) {
@@ -93,13 +105,19 @@ type ExpiringMembersResponse = {
 export const doGetExpiringMembers = async (params: {
   month: number;
   year: number;
+  sortBy?: string;
+  sortOrder?: 'asc' | 'desc';
 }): Promise<ExpiringMember[]> => {
+  const queryParams: Record<string, string> = {
+    month: params.month.toString(),
+    year: params.year.toString(),
+  };
+  if (params.sortBy) queryParams.sortBy = params.sortBy;
+  if (params.sortOrder) queryParams.sortOrder = params.sortOrder;
+
   const response = await getRequest<ExpiringMembersResponse>(
     API_ENDPOINTS.MEMBERS_EXPIRING,
-    {
-      month: params.month.toString(),
-      year: params.year.toString(),
-    }
+    queryParams
   );
 
   if (!response?.success) {
